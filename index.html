@@ -788,8 +788,10 @@ function previewBeat(beat,sub,barIndex=state.currentBar,string=null){
  const event=events({...state,...bar}).find(event=>event.beat===beat&&event.sub===sub);
  if(!event)return;
  if(string!==null){
-  const fret=event.tab[string].fret??0;
-  event.tab=emptyTab();event.tab[string].fret=fret;event.type='finger';
+  // Audition every assigned finger in this slot, using open strings for blank TAB.
+  const sounding=new Set(playbackNotes({...event,type:'finger'},state.mode).map(note=>note.string));
+  event.tab=event.tab.map((note,index)=>({...note,fret:sounding.has(index)?note.fret??0:null}));
+  event.type='finger';
  }
  audition.preview(event,state.mode,state.tempo);
 }
