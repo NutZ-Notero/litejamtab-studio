@@ -63,7 +63,7 @@
 .bar-controls{flex-direction:column;gap:12px;padding:16px 20px 40px;min-width:0}
 .bar-box-scroll{width:100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#666 transparent;overscroll-behavior-x:contain}
 .bar-boxes{display:flex;align-items:center;justify-content:center;gap:9px;width:max-content;min-width:100%;padding:5px 4px 9px}
-.bar-box{flex:0 0 auto;min-width:51px;height:33px;padding:0 10px;border:3px solid #e7e7e7;border-radius:9px;background:transparent;color:#f4f4f4;font:400 22px/1 Arial,sans-serif;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:auto}
+.bar-box{flex:0 0 auto;min-width:51px;height:33px;padding:0 10px;border:3px solid #e7e7e7;border-radius:9px;background:transparent;color:#f4f4f4;font:400 22px/1 Arial,sans-serif;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none}
 .bar-box.current{border-color:#56ed24}.bar-box:hover{background:#ffffff0c}.bar-box.holding{background:#ffffff12}.bar-box.dragging{border-color:#a2f877;background:#46513e;cursor:grabbing;opacity:.8}.bar-box.drop-target{border-color:#a2f877;background:#435236;box-shadow:0 0 0 2px #85de6150}.bar-box:focus-visible{outline:2px solid #a3e873;outline-offset:3px}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
 @media(max-width:600px){.bar-controls{padding:12px 12px 38px;gap:8px}.bar-box{min-width:44px;height:31px;font-size:19px}.bar-boxes{gap:7px}}
@@ -128,7 +128,7 @@
  #toast{max-width:calc(100vw - 24px);width:max-content;bottom:max(16px,env(safe-area-inset-bottom));text-align:center;z-index:20}
  #fret-editor,#export-menu{max-height:calc(100dvh - 32px);overflow-y:auto}
  button,select{touch-action:manipulation}
- .tab-note,.bar-box{touch-action:pan-x pan-y}
+ .tab-note{touch-action:pan-x pan-y}.bar-box{touch-action:none}
 }
 @media(max-width:350px){.toolbar{gap:6px;padding-left:6px;padding-right:6px}.tabs button{font-size:13px;padding:10px}.prototype{--slot-min:46px}.toolbar select{min-width:60px}}
 
@@ -986,7 +986,8 @@ $('#grid').addEventListener('contextmenu',e=>{
 document.addEventListener?.('pointerdown',e=>{if(!e.target.closest?.('#help-tooltip'))hideHelp();},true);
 document.addEventListener?.('keydown',e=>{if(e.key==='Escape'){cancelHold();hideHelp();}});
 
-// A short tap navigates; moving before the two-second hold remains a scroll gesture.
+// Reserve touches on bar buttons so native panning cannot cancel a held drag.
+// A short tap navigates; swiping before the two-second hold scrolls instead.
 let barGesture=null,suppressBarClickUntil=0;
 const barBoxTarget=e=>e.target.closest('[data-bar-index]');
 function cancelBarGesture(){
@@ -1003,15 +1004,17 @@ $('#bar-boxes').addEventListener('click',e=>{
  const box=barBoxTarget(e);if(box)navigateBar(+box.dataset.barIndex);
 });
 $('#bar-boxes').addEventListener('pointerdown',e=>{
+ if(e.isPrimary===false)return;
  if(e.button!==undefined&&e.button!==0)return;
  const box=barBoxTarget(e);if(!box)return;
  cancelBarGesture();suppressBarClickUntil=0;
  const index=+box.dataset.barIndex;
  if(!Number.isInteger(index)||index<0||index>=state.bars.length)return;
- const gesture={index,target:index,x:e.clientX,y:e.clientY,pointerId:e.pointerId,element:box,armed:false};
+ const gesture={index,target:index,x:e.clientX,y:e.clientY,lastX:e.clientX,lastY:e.clientY,pointerId:e.pointerId,pointerType:e.pointerType,element:box,armed:false,scrolling:false};
  barGesture=gesture;box.classList.toggle('holding',true);
+ box.setPointerCapture?.(gesture.pointerId);
  gesture.timer=setTimeout(()=>{
-  if(barGesture!==gesture)return;
+  if(barGesture!==gesture||gesture.scrolling)return;
   gesture.armed=true;box.classList.toggle('holding',false);box.classList.toggle('dragging',true);
   box.setPointerCapture?.(gesture.pointerId);
   $('#bar-box-status').textContent=`Bar ${index+1} ready to swap. Drag onto another bar.`;
@@ -1019,7 +1022,21 @@ $('#bar-boxes').addEventListener('pointerdown',e=>{
 });
 $('#bar-boxes').addEventListener('pointermove',e=>{
  const gesture=barGesture;if(!gesture||e.pointerId!==gesture.pointerId)return;
- if(!gesture.armed){if(Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>10){suppressBarClickUntil=Date.now()+700;cancelBarGesture();}return;}
+ const dx=e.clientX-gesture.lastX,dy=e.clientY-gesture.lastY;
+ gesture.lastX=e.clientX;gesture.lastY=e.clientY;
+ if(!gesture.armed){
+  if(!gesture.scrolling&&Math.hypot(e.clientX-gesture.x,e.clientY-gesture.y)>10){
+   suppressBarClickUntil=Date.now()+700;
+   if(gesture.pointerType!=='touch'){cancelBarGesture();return;}
+   gesture.scrolling=true;clearTimeout(gesture.timer);gesture.element.classList.toggle('holding',false);
+  }
+  if(gesture.scrolling){
+   e.preventDefault();
+   if(Math.abs(e.clientX-gesture.x)>=Math.abs(e.clientY-gesture.y))$('#bar-box-scroll').scrollLeft-=dx;
+   else window.scrollBy(0,-dy);
+  }
+  return;
+ }
  e.preventDefault();
  const scroller=$('#bar-box-scroll'),bounds=scroller.getBoundingClientRect();
  if(e.clientX<bounds.left+28)scroller.scrollLeft-=16;
@@ -1028,16 +1045,20 @@ $('#bar-boxes').addEventListener('pointermove',e=>{
  gesture.target=hit?+hit.dataset.barIndex:gesture.index;
  for(const box of document.querySelectorAll('[data-bar-index]'))box.classList.toggle('drop-target',+box.dataset.barIndex===gesture.target&&gesture.target!==gesture.index);
 });
-$('#bar-boxes').addEventListener('pointerleave',()=>{if(barGesture&&!barGesture.armed)cancelBarGesture();});
-$('#bar-boxes').addEventListener('touchmove',e=>{if(barGesture?.armed)e.preventDefault();},{passive:false});
+$('#bar-boxes').addEventListener('pointerleave',()=>{if(barGesture&&!barGesture.armed&&barGesture.pointerType!=='touch')cancelBarGesture();});
+$('#bar-boxes').addEventListener('touchmove',e=>{if(barGesture?.armed||barGesture?.scrolling)e.preventDefault();},{passive:false});
 $('#bar-boxes').addEventListener('pointerup',e=>{
  if(!barGesture||e.pointerId!==barGesture.pointerId)return;
- const {index,target,armed}=barGesture;
+ const {index,armed,scrolling}=barGesture;
+ const hit=armed?document.elementFromPoint(e.clientX,e.clientY)?.closest('[data-bar-index]'):null;
+ const target=hit?+hit.dataset.barIndex:barGesture.target;
  cancelBarGesture();
+ if(scrolling){e.preventDefault();suppressBarClickUntil=Date.now()+700;return;}
  if(!armed)return;
  e.preventDefault();suppressBarClickUntil=Date.now()+700;
  if(index!==target){change(()=>swapBars(state,index,target));$('#bar-box-status').textContent=`Swapped bars ${index+1} and ${target+1}.`;}
 });
+$('#bar-boxes').addEventListener('contextmenu',e=>{if(barBoxTarget(e)){e.preventDefault();if(barGesture)suppressBarClickUntil=Date.now()+700;}});
 for(const name of ['pointercancel','lostpointercapture'])$('#bar-boxes').addEventListener(name,()=>{if(barGesture){suppressBarClickUntil=Date.now()+700;cancelBarGesture();}});
 $('#bar-boxes').addEventListener('keydown',e=>{
  const box=barBoxTarget(e);if(!box||!e.altKey||!['ArrowLeft','ArrowRight'].includes(e.key))return;
