@@ -270,6 +270,7 @@ function parseFret(value){
 function setTabFret(s,index,value){s.tab[index]={fret:parseFret(value),color:'red'};}
 function cycleTabColor(s,index){if(s.tab[index].fret!==null)s.tab[index].color=cycle(s.tab[index].color,TAB_COLORS);}
 function addExampleChord(s){
+ s.chordName='C';
  s.tab=[{fret:0,color:'white'},{fret:1,color:'red'},{fret:0,color:'white'},{fret:2,color:'green'},{fret:3,color:'blue'},{fret:null,color:'red'}];
 }
 
@@ -669,7 +670,7 @@ function renderStep(s,b,si,hidden){
  const note=hidden||si!==0||(isCompound(state)&&b%3!==0)?'':`<button class="control" data-action="division" ${data} title="${durationLabels[duration]} note · change beat subdivision" aria-label="Beat ${b+1} subdivision: ${duration}">${assetImage('note-'+duration)}</button>`;
  const emphasis=hidden?'':`<button class="control accent ${s.accent?'':'off'}" data-action="accent" ${data} aria-pressed="${s.accent}" aria-label="Beat ${b+1}, step ${si+1} accent">${s.accent?accent():assetImage('type-blank')}</button>`;
  const neckControls=hidden?'':s.type==='finger'?picking(s,b,si):s.type==='strum'?`<button class="strum-control" data-action="direction" ${data} aria-label="${s.direction} strum, click to reverse">${imageWindow('type-strum',s.direction==='down'?'215 60 130 265':'65 60 130 265',405,405,'asset-image')}</button>`:s.type==='rest'?`<span class="rest-mark">${restIcon(duration)}</span>`:s.type==='slap'?`<button class="slap-mark" data-action="slap" ${data} aria-label="Slap, click to preview">${assetImage('type-slap')}</button>`:'';
- return `<div class="step ${si?'weak':''} ${hidden?'covered':''}" data-id="${b}-${si}"${hidden?' data-covered="true"':''}><div class="control-row">${playback}</div><div class="control-row">${note}</div><div class="control-row">${emphasis}</div><div class="strings" ${hidden?'':`data-help="beat-board" ${data}`}>${board()}${neckControls}</div><div class="beat-number">${beatNumber}</div><div class="strings tab-strings">${board()}${hidden?'':tabControls(s,b,si)}</div><div class="chord-row">${hidden?'':`<button class="add-chord" data-action="chord" ${data}>Add from<br>Chord</button><div class="chord-clipboard"><button data-action="copy-chord" ${data} title="Copy this TAB chord">Copy</button><button data-action="paste-chord" ${data} title="Replace this TAB chord" ${copiedChord?'':'disabled'}>Paste</button><button data-action="clear-chord" ${data} title="Clear all TAB notes in this beat" ${s.tab.some(note=>note.fret!==null)?'':'disabled'}>Clear</button></div>`}</div></div>`;
+ return `<div class="step ${si?'weak':''} ${hidden?'covered':''}" data-id="${b}-${si}"${hidden?' data-covered="true"':''}><div class="control-row">${playback}</div><div class="control-row">${note}</div><div class="control-row">${emphasis}</div><div class="strings" ${hidden?'':`data-help="beat-board" ${data}`}>${board()}${neckControls}</div><div class="beat-number">${beatNumber}</div><div class="strings tab-strings">${board()}${hidden?'':tabControls(s,b,si)}</div><div class="chord-row">${hidden?'':`<button class="add-chord" data-action="chord" ${data}>${s.chordName==='C'?'C':'Add from<br>Chord'}</button><div class="chord-clipboard"><button data-action="copy-chord" ${data} title="Copy this TAB chord">Copy</button><button data-action="paste-chord" ${data} title="Replace this TAB chord" ${copiedChord?'':'disabled'}>Paste</button><button data-action="clear-chord" ${data} title="Clear all TAB notes in this beat" ${s.chordName||s.tab.some(note=>note.fret!==null)?'':'disabled'}>Clear</button></div>`}</div></div>`;
 }
 function render(){
  cancelHold();hideHelp();
@@ -716,7 +717,7 @@ $('#grid').addEventListener('click',e=>{
  }
  if(a==='copy-chord'){copiedChord=structuredClone(beat.steps[si].tab);render();player.lastPosition='';toast('Chord copied');return;}
  if(a==='paste-chord'){if(copiedChord){change(()=>{beat.steps[si].tab=structuredClone(copiedChord);toast('Chord replaced');});previewBeat(b,si);}return;}
- if(a==='clear-chord'){if(beat.steps[si].tab.some(note=>note.fret!==null)){change(()=>{beat.steps[si].tab=emptyTab();toast('TAB cleared');});audition.stop();}return;}
+ if(a==='clear-chord'){if(beat.steps[si].chordName||beat.steps[si].tab.some(note=>note.fret!==null)){change(()=>{beat.steps[si].tab=emptyTab();delete beat.steps[si].chordName;toast('TAB cleared');});audition.stop();}return;}
  if(a==='chord'){change(()=>addExampleChord(beat.steps[si]));previewBeat(b,si);return;}
 
  const assignmentBar=state.currentBar;let assignedString=null;
