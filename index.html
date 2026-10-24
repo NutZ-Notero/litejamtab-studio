@@ -280,29 +280,15 @@ function playbackTimeline(state){
   if(note){note.seconds=end-note.start;held.delete(string);}
  };
  for(const event of timeline){
-  const sustainedPitches=new Set();
-  // A fresh strum replaces the previous stroke, including strings omitted now.
+  // Each string rings until its own next attack/rest; a new strum replaces the stroke.
   if(event.type==='strum')for(const string of held.keys())release(string,event.start);
-  if(event.type==='finger'&&event.notes.length){
-   const pitches=new Set(event.notes.map(note=>note.midi));
-   const ringing=new Set();
-   for(const [string,note] of held){
-    if(!note.fromStrum)continue;
-    if(pitches.has(note.midi)){ringing.add(note.midi);sustainedPitches.add(note.midi);}
-    else release(string,event.start);
-   }
-   // Keep matching strummed pitches ringing without a second PIMA attack.
-   event.notes=event.notes.filter(note=>!ringing.has(note.midi));
-  }
   if(event.type==='rest'||event.type==='slap'){
    for(const string of held.keys())release(string,event.start);
   }else if(event.type==='finger'){
    const fingers=state.mode==='sandbox'?event.sandboxFingers:event.fingers;
    fingers.forEach((finger,string)=>{if(finger==='rest')release(string,event.start);});
-   if(state.mode!=='sandbox'&&event.bass!==''){
-    for(const string of [3,4,5]){
-     if(event.bass==='rest'||!sustainedPitches.has(held.get(string)?.midi))release(string,event.start);
-    }
+   if(state.mode!=='sandbox'&&event.bass==='rest'){
+    for(const string of [3,4,5])release(string,event.start);
    }
   }
   for(const note of event.notes){
@@ -383,7 +369,7 @@ class PatternPlayer{
    const end=note?Math.max(cutoff,this.startTime+event.start+note.seconds):cutoff;
    const gain=voice.gain.gain;
    gain.cancelScheduledValues?.(cutoff);
-   gain.setTargetAtTime?.(.0001,Math.max(cutoff,end-.015),.005);
+   gain.setTargetAtTime?.(.0001,end,.002);
    voice.source.stop(end);voice.end=end;
    voice.eventStart=(voice.eventStart*ratio);
   }
@@ -462,7 +448,9 @@ class PatternPlayer{
   source.setPeriodicWave(this.wave);source.frequency.setValueAtTime(440*Math.pow(2,(midi-69)/12),time);
   const end=time+duration;
   gain.gain.setValueAtTime(.0001,time);gain.gain.exponentialRampToValueAtTime(.095*velocity,time+.004);
-  gain.gain.exponentialRampToValueAtTime(.018*velocity,time+duration*.65);gain.gain.exponentialRampToValueAtTime(.0001,end);
+  // Decay independently of note length, then release only at the actual stop/next note.
+  gain.gain.setTargetAtTime(.012*velocity,time+.004,.35);
+  gain.gain.setTargetAtTime(.0001,end,.002);
   return this.track(source,gain,time,end+.012);
  }
  slap(time,accent){
