@@ -179,6 +179,9 @@ main{padding-bottom:110px}
 #pattern-name-input{width:100%;padding:12px;border:1px solid #666;border-radius:8px;background:#1e1e1e;color:#fff;font:inherit}
 #pattern-name-error{color:#ffb4a8}
 @media(max-width:650px){main{padding-bottom:110px}.project-dock{right:12px;bottom:calc(12px + env(safe-area-inset-bottom))}.project-dialog{padding:20px}.library-item{padding:12px;gap:9px}}
+
+.bar-box.bar-drag-preview{position:fixed;left:0;top:0;z-index:1100;display:grid;place-items:center;min-width:0;margin:0;pointer-events:none;border-color:#a2f877;background:#46513e;color:#fff;opacity:1;box-shadow:0 8px 22px #0008,0 0 0 2px #85de6140;will-change:transform;transition:none}
+.bar-box.dragging{opacity:.35}
 </style></head>
 <body><svg xmlns="http://www.w3.org/2000/svg" id="asset-sprite" width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;overflow:hidden;pointer-events:none"></svg><main><header class="app-header"><h1>LitejamTab Studio</h1><div class="pattern-name-field"><input id="pattern-title" type="text" maxlength="80" autocomplete="off" aria-label="LitejamTab name" placeholder="Untitled LitejamTab"></div></header><section class="prototype" aria-label="LitejamTab Studio pattern editor"><div class="toolbar"><div class="tabs" aria-label="Editor mode"><button class="selected" data-mode="default">Default</button><button data-mode="sandbox">Sandbox</button></div><select id="signature" aria-label="Time signature"><option value="4">4/4</option><option value="3">3/4</option><option value="6">6/8</option><option value="9">9/8</option><option value="12">12/8</option></select></div>
 <div class="transport" role="group" aria-label="Playback"><button id="play" aria-label="Play" title="Play from start"></button><button id="loop" aria-label="Loop" aria-pressed="false" title="Loop off · click to repeat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11V7a3 3 0 0 1 3-3h13m-3-3 3 3-3 3M21 13v4a3 3 0 0 1-3 3H5m3-3-3 3 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><label class="tempo-control" title="Quarter-note beats per minute"><input id="tempo" type="number" min="30" max="240" step="1" value="80" aria-label="Tempo in quarter-note beats per minute"><span>BPM</span></label><span id="playback-status" class="sr-only" role="status">Stopped</span></div><p class="tooltip-hint">Press and hold any control to view its tooltip.</p><div class="grid-shell"><div class="row-labels"><div aria-hidden="true"></div><div aria-hidden="true"></div><div aria-hidden="true"></div><div class="board-label"><span class="vertical-board-label">BEAT</span><div class="neck-start" aria-hidden="true"></div></div><div class="beat-label" aria-hidden="true"></div><div class="board-label"><span class="vertical-board-label">TAB</span><div class="neck-start tab-neck-start" aria-hidden="true"></div></div><div class="chord-label-spacer" aria-hidden="true"></div></div><div id="grid-scroll" class="grid-scroll" tabindex="0" aria-label="Beat grid. Scroll horizontally when subdivisions exceed the available width"><div id="grid" class="grid"></div></div></div>
@@ -990,10 +993,25 @@ document.addEventListener?.('keydown',e=>{if(e.key==='Escape'){cancelHold();hide
 // A short tap navigates; swiping before the two-second hold scrolls instead.
 let barGesture=null,suppressBarClickUntil=0;
 const barBoxTarget=e=>e.target.closest('[data-bar-index]');
+function moveBarDragPreview(gesture,x,y){
+ if(!gesture.preview)return;
+ gesture.preview.style.transform=`translate3d(${x-gesture.grabX}px,${y-gesture.grabY-12}px,0)`;
+}
+function createBarDragPreview(gesture){
+ const box=gesture.element.getBoundingClientRect();
+ gesture.grabX=gesture.x-box.left;gesture.grabY=gesture.y-box.top;
+ const preview=document.createElement('div');
+ preview.className='bar-box bar-drag-preview';preview.textContent=gesture.element.textContent;
+ preview.setAttribute('aria-hidden','true');
+ preview.style.width=box.width+'px';preview.style.height=box.height+'px';
+ gesture.preview=preview;document.body.append(preview);
+ moveBarDragPreview(gesture,gesture.lastX,gesture.lastY);
+}
 function cancelBarGesture(){
  if(!barGesture)return;
  const gesture=barGesture;barGesture=null;
  clearTimeout(gesture.timer);
+ gesture.preview?.remove();
  gesture.element.classList.toggle('holding',false);
  gesture.element.classList.toggle('dragging',false);
  if(gesture.element.hasPointerCapture?.(gesture.pointerId))gesture.element.releasePointerCapture(gesture.pointerId);
@@ -1016,6 +1034,7 @@ $('#bar-boxes').addEventListener('pointerdown',e=>{
  gesture.timer=setTimeout(()=>{
   if(barGesture!==gesture||gesture.scrolling)return;
   gesture.armed=true;box.classList.toggle('holding',false);box.classList.toggle('dragging',true);
+  createBarDragPreview(gesture);
   box.setPointerCapture?.(gesture.pointerId);
   $('#bar-box-status').textContent=`Bar ${index+1} ready to swap. Drag onto another bar.`;
  },2000);
@@ -1038,6 +1057,7 @@ $('#bar-boxes').addEventListener('pointermove',e=>{
   return;
  }
  e.preventDefault();
+ moveBarDragPreview(gesture,e.clientX,e.clientY);
  const scroller=$('#bar-box-scroll'),bounds=scroller.getBoundingClientRect();
  if(e.clientX<bounds.left+28)scroller.scrollLeft-=16;
  if(e.clientX>bounds.right-28)scroller.scrollLeft+=16;
