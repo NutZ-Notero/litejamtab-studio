@@ -729,8 +729,8 @@ $('#grid').addEventListener('click',e=>{
   if(s.tab[string].fret===null)openFretEditor(b,si,string);else change(()=>cycleTabColor(s,string));
   return;
  }
- if(a==='copy-chord'){copiedChord=structuredClone(beat.steps[si].tab);render();player.lastPosition='';toast('Chord copied');return;}
- if(a==='paste-chord'){if(copiedChord){change(()=>{beat.steps[si].tab=structuredClone(copiedChord);toast('Chord replaced');});previewBeat(b,si);}return;}
+ if(a==='copy-chord'){const s=beat.steps[si];copiedChord=structuredClone({tab:s.tab,chordName:s.chordName});render();player.lastPosition='';toast('Chord copied');return;}
+ if(a==='paste-chord'){if(copiedChord){change(()=>{const s=beat.steps[si];s.tab=structuredClone(copiedChord.tab);if(copiedChord.chordName)s.chordName=copiedChord.chordName;else delete s.chordName;toast('Chord replaced');});previewBeat(b,si);}return;}
  if(a==='clear-chord'){if(beat.steps[si].chordName||beat.steps[si].tab.some(note=>note.fret!==null)){change(()=>{beat.steps[si].tab=emptyTab();delete beat.steps[si].chordName;toast('TAB cleared');});audition.stop();}return;}
  if(a==='chord'){change(()=>addExampleChord(beat.steps[si]));previewBeat(b,si);return;}
 
@@ -927,8 +927,8 @@ function tooltipText(button){
  if(action==='direction')return strumTip;
  if(action==='tab')return 'TAB Fretboard\nClick to enter a fret number.\nBlank uses the open string pitch (fret 0) when that string is played.\nApplying a blank value does not play a preview.';
  if(action==='chord')return 'Add from Chord\nClick to apply the example chord to this TAB column.';
- if(action==='copy-chord')return 'Copy\nClick to copy this TAB chord, including frets, colors and blank strings.';
- if(action==='paste-chord')return 'Paste\nClick to replace this TAB chord with the copied chord.';
+ if(action==='copy-chord')return 'Copy\nClick to copy this TAB chord, including its chord label, frets, colors and blank strings.';
+ if(action==='paste-chord')return 'Paste\nClick to replace this TAB chord and its label with the copied chord.';
  if(action==='clear-chord')return 'Clear\nClick to remove all TAB notes in this column. Undo restores them.';
  if(help==='beat-board')return ({rest:'Rest\nStop all previous sounds at this beat.',slap:'Slap\nSlap the strings at this beat.',blank:'Blank\nSustain previous sounds through this beat.',strum:strumTip,finger:'Fingerpicking\nClick a string control to assign a finger.\nBlank sustains its previous sound; Rest stops it.'})[s?.type]??'BEAT Fretboard';
  return '';
