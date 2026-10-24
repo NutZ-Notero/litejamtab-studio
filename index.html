@@ -583,7 +583,8 @@ $('#grid').addEventListener('click',e=>{
   if(a.startsWith('finger')&&state.mode==='default'){const i=+a.slice(-1);if(Number.isInteger(i)&&i>=0&&i<3){s.fingers[i]=nextFinger(s.fingers,i);if(['i','m','a'].includes(s.fingers[i]))assignedString=i;}}
   if(a==='direction')s.direction=cycle(s.direction,['down','up']);
  });
- if(assignedString!==null)previewBeat(b,si,assignmentBar,assignedString);
+ if((a==='type'||a==='direction')&&beat.steps[si].type==='strum')previewBeat(b,si,assignmentBar,'strum');
+ else if(assignedString!==null)previewBeat(b,si,assignmentBar,assignedString);
  else if(a==='bass'||a.startsWith('finger')||a.startsWith('sandbox'))audition.stop();
 });
 $('#signature').onchange=e=>{const signature=+e.target.value;if([3,4,6,9,12].includes(signature))change(()=>state.signature=signature);};
@@ -787,7 +788,10 @@ function previewBeat(beat,sub,barIndex=state.currentBar,string=null){
  const bar=state.bars[barIndex];if(!bar)return;
  const event=events({...state,...bar}).find(event=>event.beat===beat&&event.sub===sub);
  if(!event)return;
- if(string!==null){
+ if(string==='strum'){
+  // With no TAB chord assigned, audition a strum across the open strings.
+  if(!event.tab.some(note=>note.fret!==null))event.tab=event.tab.map(note=>({...note,fret:0}));
+ }else if(string!==null){
   // Audition every assigned finger in this slot, using open strings for blank TAB.
   const sounding=new Set(playbackNotes({...event,type:'finger'},state.mode).map(note=>note.string));
   event.tab=event.tab.map((note,index)=>({...note,fret:sounding.has(index)?note.fret??0:null}));
