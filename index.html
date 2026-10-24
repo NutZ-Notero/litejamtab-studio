@@ -166,7 +166,11 @@ main{padding-bottom:110px}
 .project-dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
 #library-list{display:grid;gap:9px}
 .library-item{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px;border:1px solid #464646;border-radius:10px;background:#303030}
-.library-item-info{min-width:0}
+.library-item-info{min-width:0;flex:1}
+.library-item-actions{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.project-dialog .library-delete{display:grid;place-items:center;width:40px;padding:8px;color:#bbb;background:transparent}
+.library-delete svg{width:20px;height:20px;pointer-events:none}
+.project-dialog .library-delete:hover{color:#ffaaa3;border-color:#b86b65;background:#492d2b}
 .library-item-name{margin:0;font-size:15px;font-weight:600;overflow-wrap:anywhere}
 .library-item-meta{margin:6px 0 0!important;font-size:11px!important;color:#aaa}
 .library-item-current{color:#8edb4b;font-size:11px;margin-top:5px}
@@ -351,6 +355,13 @@ function readPatternLibrary(storage){
   throw new Error('The saved library could not be read. Existing saves have been kept.');
  }
  return data.items;
+}
+function removeFromPatternLibrary(storage,id,currentId){
+ if(id===currentId)return false;
+ const items=readPatternLibrary(storage),remaining=items.filter(item=>item.id!==id);
+ if(remaining.length===items.length)return false;
+ storage.setItem(patternLibraryKey,JSON.stringify({version:1,items:remaining}));
+ return true;
 }
 function saveToPatternLibrary(storage,pattern,{copy=false,now=Date.now(),id=null}={}){
  const items=readPatternLibrary(storage);
@@ -794,6 +805,12 @@ function openLibraryPattern(item){
  history=[];copiedChord=null;
  $('#pattern-library').close();persist();render();$('#grid-scroll').scrollLeft=0;toast('Pattern opened');
 }
+function deleteLibraryPattern(id){
+ if(id===state.libraryId)return;
+ try{
+  if(removeFromPatternLibrary(localStorage,id,state.libraryId))renderPatternLibrary();
+ }catch(error){$('#library-message').textContent=error.message||'This tab could not be deleted.';}
+}
 function renderPatternLibrary(){
  const list=$('#library-list');list.replaceChildren();
  try{
@@ -809,7 +826,14 @@ function renderPatternLibrary(){
    info.append(meta);
    if(item.id===state.libraryId){const current=document.createElement('div');current.className='library-item-current';current.textContent='Current pattern';info.append(current);}
    const open=document.createElement('button');open.textContent='Open';open.setAttribute('aria-label','Open '+item.name);open.onclick=()=>openLibraryPattern(item);
-   row.append(info,open);list.append(row);
+   const actions=document.createElement('div');actions.className='library-item-actions';actions.append(open);
+   if(item.id!==state.libraryId){
+    const trash=document.createElement('button');trash.className='library-delete';trash.type='button';
+    trash.setAttribute('aria-label','Delete '+item.name);trash.title='Delete tab';
+    trash.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14h12l1-14M10 10v6m4-6v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    trash.onclick=()=>deleteLibraryPattern(item.id);actions.append(trash);
+   }
+   row.append(info,actions);list.append(row);
   }
  }catch(error){$('#library-message').textContent=error.message;}
 }
