@@ -142,10 +142,44 @@
 
 .app-header{padding:0 4px 16px;text-align:left}.app-header h1{margin:0;color:#f1f1ed;font-size:26px;font-weight:600;line-height:1.3;letter-spacing:-.4px}
 @media(max-width:650px){.app-header{padding:8px 6px 12px}.app-header h1{font-size:21px}}
+
+main{padding-bottom:110px}
+#pattern-title{display:inline-flex;align-items:center;gap:12px;max-width:100%;border:0;padding:0;background:transparent;color:inherit;font:inherit;letter-spacing:inherit;text-align:left}
+#pattern-title-text{min-width:0;overflow-wrap:anywhere}
+#pattern-title svg{width:18px;height:18px;flex:0 0 18px;opacity:.45}
+#pattern-title:hover svg{opacity:1;color:#8edb4b}
+.project-dock{position:fixed;z-index:20;right:calc(16px + env(safe-area-inset-right));bottom:calc(16px + env(safe-area-inset-bottom));display:flex;gap:6px;padding:6px;border:1px solid #505050;border-radius:14px;background:#282828;box-shadow:0 8px 26px #0007}
+.project-dock button{display:flex;align-items:center;justify-content:center;gap:8px;height:44px;min-width:44px;padding:0 13px;border:0;border-radius:9px;background:transparent;color:#eee;font-weight:600}
+.project-dock svg{width:23px;height:23px;pointer-events:none}
+.project-dock #library-open:hover{background:#3a3a3a}
+.project-dock #library-save,.project-primary{background:#59b500!important;color:#112000!important;border-color:#69c519!important}
+.project-dock #library-save:hover,.project-primary:hover{background:#6acb10!important}
+.project-dialog{width:min(480px,calc(100% - 28px));max-height:calc(100dvh - 36px);overflow:auto;padding:24px;border:1px solid #505050;border-radius:16px;background:#282828;color:#f4f4f4;box-shadow:0 20px 70px #0009}
+.project-dialog::backdrop{background:#0009}
+.project-dialog h2{margin:0;font-size:22px;font-weight:600}
+.project-dialog p{color:#aaa;font-size:13px;line-height:1.5}
+.project-dialog-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.project-dialog-heading p{margin:7px 0 12px}
+.project-dialog button{min-height:40px;padding:8px 13px;border:1px solid #555;border-radius:8px;background:#333;color:#eee;white-space:nowrap}
+.project-dialog .dialog-close{border:0;background:transparent;font-size:25px;line-height:1;min-width:36px;padding:0}
+.project-dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+#library-list{display:grid;gap:9px}
+.library-item{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px;border:1px solid #464646;border-radius:10px;background:#303030}
+.library-item-info{min-width:0}
+.library-item-name{margin:0;font-size:15px;font-weight:600;overflow-wrap:anywhere}
+.library-item-meta{margin:6px 0 0!important;font-size:11px!important;color:#aaa}
+.library-item-current{color:#8edb4b;font-size:11px;margin-top:5px}
+#library-message:empty,#pattern-name-error:empty{display:none}
+#pattern-name-dialog label{display:block;margin:20px 0 8px;color:#bbb;font-size:13px}
+#pattern-name-input{width:100%;padding:12px;border:1px solid #666;border-radius:8px;background:#1e1e1e;color:#fff;font:inherit}
+#pattern-name-error{color:#ffb4a8}
+@media(max-width:650px){main{padding-bottom:110px}.project-dock{right:12px;bottom:calc(12px + env(safe-area-inset-bottom))}.project-dialog{padding:20px}.library-item{padding:12px;gap:9px}}
 </style></head>
-<body><svg xmlns="http://www.w3.org/2000/svg" id="asset-sprite" width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;overflow:hidden;pointer-events:none"></svg><main><header class="app-header"><h1>LitejamTab Studio</h1></header><section class="prototype" aria-label="LitejamTab Studio pattern editor"><div class="toolbar"><div class="tabs" aria-label="Editor mode"><button class="selected" data-mode="default">Default</button><button data-mode="sandbox">Sandbox</button></div><select id="signature" aria-label="Time signature"><option value="4">4/4</option><option value="3">3/4</option><option value="6">6/8</option><option value="9">9/8</option><option value="12">12/8</option></select></div>
+<body><svg xmlns="http://www.w3.org/2000/svg" id="asset-sprite" width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;overflow:hidden;pointer-events:none"></svg><main><header class="app-header"><h1><button id="pattern-title" aria-label="Rename pattern" title="Click to rename this pattern"><span id="pattern-title-text">LitejamTab Studio</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5 4 4M4 20l5-1L20 8a2.8 2.8 0 0 0-4-4L5 15l-1 5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></h1></header><section class="prototype" aria-label="LitejamTab Studio pattern editor"><div class="toolbar"><div class="tabs" aria-label="Editor mode"><button class="selected" data-mode="default">Default</button><button data-mode="sandbox">Sandbox</button></div><select id="signature" aria-label="Time signature"><option value="4">4/4</option><option value="3">3/4</option><option value="6">6/8</option><option value="9">9/8</option><option value="12">12/8</option></select></div>
 <div class="transport" role="group" aria-label="Playback"><button id="play" aria-label="Play" title="Play from start"></button><button id="loop" aria-label="Loop" aria-pressed="false" title="Loop off · click to repeat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11V7a3 3 0 0 1 3-3h13m-3-3 3 3-3 3M21 13v4a3 3 0 0 1-3 3H5m3-3-3 3 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><label class="tempo-control" title="Quarter-note beats per minute"><input id="tempo" type="number" min="30" max="240" step="1" value="80" aria-label="Tempo in quarter-note beats per minute"><span>BPM</span></label><span id="playback-status" class="sr-only" role="status">Stopped</span></div><p class="tooltip-hint">Press and hold any control to view its tooltip.</p><div class="grid-shell"><div class="row-labels"><div aria-hidden="true"></div><div aria-hidden="true"></div><div aria-hidden="true"></div><div class="board-label"><span class="vertical-board-label">BEAT</span><div class="neck-start" aria-hidden="true"></div></div><div class="beat-label" aria-hidden="true"></div><div class="board-label"><span class="vertical-board-label">TAB</span><div class="neck-start tab-neck-start" aria-hidden="true"></div></div><div class="chord-label-spacer" aria-hidden="true"></div></div><div id="grid-scroll" class="grid-scroll" tabindex="0" aria-label="Beat grid. Scroll horizontally when subdivisions exceed the available width"><div id="grid" class="grid"></div></div></div>
-<div class="bar-controls"><nav class="bar-navigation" aria-label="Bar navigation"><button id="bar-previous" aria-label="Previous bar" hidden>&lt;</button><span id="bar-position" aria-live="polite">BAR 1/1</span><button id="bar-next" aria-label="Create new bar">+</button></nav><div id="bar-box-scroll" class="bar-box-scroll" aria-label="Bars. Scroll to see more"><div id="bar-boxes" class="bar-boxes" role="group" aria-label="Jump to a bar. Hold 2 seconds and drag to swap; keyboard: Alt plus left or right arrow"></div></div><span id="bar-box-status" class="sr-only" role="status"></span><button id="bar-delete" hidden>Delete</button></div></section><div class="utility"><span id="save-status" role="status">Changes saved on this device</span><div><button id="undo" disabled>Undo</button><button id="reset">Reset</button><button id="save" aria-haspopup="dialog" aria-controls="export-menu">Export</button><dialog id="export-menu" aria-labelledby="export-title"><h2 id="export-title">Export</h2><div class="export-options"><button id="export-litejam">Litejam Tab</button><button id="export-alphatab">Alphatab</button><button id="export-json">JSON</button></div><button id="export-cancel">Cancel</button></dialog></div></div><span id="step-count" hidden></span><span id="pattern-name" hidden></span></main><div id="help-tooltip" role="tooltip" hidden></div><div id="toast" role="status"></div><dialog id="fret-editor" aria-labelledby="fret-title"><form id="fret-form"><h2 id="fret-title">Edit fret</h2><p id="fret-position"></p><label for="fret-value">Fret number</label><input id="fret-value" type="text" inputmode="numeric" autocomplete="off" maxlength="2" aria-describedby="fret-help fret-error"><small id="fret-help">Leave empty to clear this string.</small><p id="fret-error" role="alert"></p><div class="fret-actions"><button type="button" id="fret-cancel">Cancel</button><button type="submit" class="fret-submit">Apply</button></div></form></dialog><script>const TYPES=['strum','finger','rest','slap','blank'];
+<div class="bar-controls"><nav class="bar-navigation" aria-label="Bar navigation"><button id="bar-previous" aria-label="Previous bar" hidden>&lt;</button><span id="bar-position" aria-live="polite">BAR 1/1</span><button id="bar-next" aria-label="Create new bar">+</button></nav><div id="bar-box-scroll" class="bar-box-scroll" aria-label="Bars. Scroll to see more"><div id="bar-boxes" class="bar-boxes" role="group" aria-label="Jump to a bar. Hold 2 seconds and drag to swap; keyboard: Alt plus left or right arrow"></div></div><span id="bar-box-status" class="sr-only" role="status"></span><button id="bar-delete" hidden>Delete</button></div></section><div class="utility"><span id="save-status" role="status">Changes saved on this device</span><div><button id="undo" disabled>Undo</button><button id="reset">Reset</button><button id="export" aria-haspopup="dialog" aria-controls="export-menu">Export</button><dialog id="export-menu" aria-labelledby="export-title"><h2 id="export-title">Export</h2><div class="export-options"><button id="export-litejam">Litejam Tab</button><button id="export-alphatab">Alphatab</button><button id="export-json">JSON</button></div><button id="export-cancel">Cancel</button></dialog></div></div><span id="step-count" hidden></span><span id="pattern-name" hidden></span></main><div class="project-dock" role="group" aria-label="Pattern files"><button id="library-open" aria-label="Open pattern library" title="Open pattern library" aria-haspopup="dialog" aria-controls="pattern-library"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v1M3 7h16a2 2 0 0 1 2 2l-2 10H3L1 9a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button><button id="library-save" title="Save this pattern to your library"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12l4 4v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm2 0v6h10V3M7 21v-8h10v8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg><span>Save</span></button></div>
+<dialog id="pattern-library" class="project-dialog" aria-labelledby="library-title"><div class="project-dialog-heading"><div><h2 id="library-title">Your library</h2><p>Saved in this browser on this device.</p></div><button id="library-close" class="dialog-close" aria-label="Close library">×</button></div><p id="library-message" role="status"></p><div id="library-list"></div><div class="project-dialog-actions"><button id="library-copy">Save a copy</button></div></dialog>
+<dialog id="pattern-name-dialog" class="project-dialog" aria-labelledby="pattern-name-heading"><form id="pattern-name-form"><h2 id="pattern-name-heading">Pattern name</h2><label for="pattern-name-input">Name</label><input id="pattern-name-input" type="text" maxlength="80" autocomplete="off" required><p id="pattern-name-error" role="alert"></p><div class="project-dialog-actions"><button id="pattern-name-cancel" type="button">Cancel</button><button type="submit" id="pattern-name-apply" class="project-primary">Apply</button></div></form></dialog><div id="help-tooltip" role="tooltip" hidden></div><div id="toast" role="status"></div><dialog id="fret-editor" aria-labelledby="fret-title"><form id="fret-form"><h2 id="fret-title">Edit fret</h2><p id="fret-position"></p><label for="fret-value">Fret number</label><input id="fret-value" type="text" inputmode="numeric" autocomplete="off" maxlength="2" aria-describedby="fret-help fret-error"><small id="fret-help">Leave empty to clear this string.</small><p id="fret-error" role="alert"></p><div class="fret-actions"><button type="button" id="fret-cancel">Cancel</button><button type="submit" class="fret-submit">Apply</button></div></form></dialog><script>const TYPES=['strum','finger','rest','slap','blank'];
 const TAB_COLORS=['red','green','blue','yellow','white'];
 const emptyTab=()=>Array.from({length:6},()=>({fret:null,color:'red'}));
 const step=()=>({tab:emptyTab(),type:'finger',accent:false,fingers:['','',''],sandboxFingers:Array(6).fill(''),bass:'',direction:'down'});
@@ -282,6 +316,52 @@ function swapBars(state,from,to){
  return true;
 }
 
+
+
+const patternLibraryKey='litejam-pattern-library-v1';
+function normalizePatternTitle(value){
+ return typeof value==='string'&&value.trim()?value.trim().replace(/\s+/g,' ').slice(0,80):'LitejamTab Studio';
+}
+function normalizePattern(state){
+ initializeBars(state);
+for(const bar of state.bars){
+ bar.compoundBeats??=compoundInitial();
+ if(bar.compoundBeats.length<12)bar.compoundBeats.push(...compoundInitial().slice(bar.compoundBeats.length));
+ for(let i=0;i<bar.compoundBeats.length;i+=3)for(let offset=1;offset<3;offset++)bar.compoundBeats[i+offset].division=bar.compoundBeats[i].division||1;
+ for(const beat of [...bar.beats,...bar.compoundBeats])for(const s of beat.steps){
+  s.sandboxFingers??=Array(6).fill('');s.tab??=emptyTab();
+ }
+ if(state.defaultsVersion!==1)bar.beats[0].steps[0].accent=true;
+}
+state.defaultsVersion=1;
+migrateSharedFingers(state);
+selectBar(state,state.currentBar);
+
+ state.title=normalizePatternTitle(state.title);
+ return state;
+}
+function readPatternLibrary(storage){
+ const raw=storage.getItem(patternLibraryKey);
+ if(raw===null)return [];
+ let data;
+ try{data=JSON.parse(raw);}catch{throw new Error('The saved library could not be read. Existing saves have been kept.');}
+ if(data?.version!==1||!Array.isArray(data.items)||!data.items.every(item=>item&&typeof item.id==='string'&&typeof item.name==='string'&&Number.isFinite(item.updatedAt)&&valid(item.pattern))){
+  throw new Error('The saved library could not be read. Existing saves have been kept.');
+ }
+ return data.items;
+}
+function saveToPatternLibrary(storage,pattern,{copy=false,now=Date.now(),id=null}={}){
+ const items=readPatternLibrary(storage);
+ const existing=copy?null:items.find(item=>item.id===pattern.libraryId);
+ const savedId=existing?.id??id??(globalThis.crypto?.randomUUID?.()??('pattern-'+now+'-'+Math.random().toString(36).slice(2)));
+ const snapshot=structuredClone(pattern);
+ snapshot.title=normalizePatternTitle(snapshot.title);snapshot.libraryId=savedId;
+ const item={id:savedId,name:snapshot.title,updatedAt:now,pattern:snapshot};
+ const index=items.findIndex(saved=>saved.id===savedId);
+ if(index<0)items.push(item);else items[index]=item;
+ storage.setItem(patternLibraryKey,JSON.stringify({version:1,items}));
+ return item;
+}
 
 const OPEN_STRING_MIDI=[64,59,55,50,45,40];
 function playbackNotes(event,mode){
@@ -554,19 +634,7 @@ const ASSETS={"bass-blank":{"viewBox":"0 0 128 280","body":"<path fill=\"#222222
 const $=s=>document.querySelector(s),storageKey='litejam-custom-picking-v2';
 let state=initial(),history=[],copiedChord=null;
 try{const saved=JSON.parse(localStorage.getItem(storageKey));if(valid(saved))state=saved;}catch{}
-initializeBars(state);
-for(const bar of state.bars){
- bar.compoundBeats??=compoundInitial();
- if(bar.compoundBeats.length<12)bar.compoundBeats.push(...compoundInitial().slice(bar.compoundBeats.length));
- for(let i=0;i<bar.compoundBeats.length;i+=3)for(let offset=1;offset<3;offset++)bar.compoundBeats[i+offset].division=bar.compoundBeats[i].division||1;
- for(const beat of [...bar.beats,...bar.compoundBeats])for(const s of beat.steps){
-  s.sandboxFingers??=Array(6).fill('');s.tab??=emptyTab();
- }
- if(state.defaultsVersion!==1)bar.beats[0].steps[0].accent=true;
-}
-state.defaultsVersion=1;
-migrateSharedFingers(state);
-selectBar(state,state.currentBar);
+normalizePattern(state);
 const typeNames={strum:'Strumming',finger:'Fingerpicking',rest:'Rest',slap:'Slap',blank:'Blank'};
 const durationLabels={'quarter':'Quarter','eighth':'Eighth','sixteenth':'Sixteenth','dotted-quarter':'Dotted quarter'};
 // One embedded SVG sprite supplies every original icon and fretboard crop.
@@ -604,6 +672,7 @@ function renderStep(s,b,si,hidden){
 }
 function render(){
  cancelHold();hideHelp();
+ updatePatternTitle();
  $('.neck-start').innerHTML=neckStart();
  $('.tab-neck-start').innerHTML=neckStart();
  const scroll=$('#grid-scroll').scrollLeft;
@@ -625,7 +694,7 @@ function render(){
  }).join('');
  $('#grid-scroll').scrollLeft=scroll;
  $('#step-count').textContent=`${events(state).length} steps · ${state.signature} ${isCompound(state)?'eighth':'quarter'} notes`;
- $('#pattern-name').textContent=state.mode==='sandbox'?'Sandbox pattern':'Untitled pattern';
+ $('#pattern-name').textContent=normalizePatternTitle(state.title);
 }
 function persist(){try{localStorage.setItem(storageKey,JSON.stringify(state));$('#save-status').textContent='Changes saved on this device';}catch{$('#save-status').textContent='Device storage unavailable — export to save';}}
 function change(fn){history.push(structuredClone(state));if(history.length>60)history.shift();fn();persist();render();player.update(state);}
@@ -687,10 +756,79 @@ $('#bar-delete').onclick=()=>{
 };
 $('#undo').onclick=()=>{if(history.length){state=history.pop();persist();render();player.update(state);}};
 function toast(text){$('#toast').textContent=text;$('#toast').style.display='block';setTimeout(()=>$('#toast').style.display='none',2200);}
-$('#save').onclick=()=>$('#export-menu').showModal();
+$('#export').onclick=()=>$('#export-menu').showModal();
 $('#export-cancel').onclick=()=>$('#export-menu').close();
 for(const [id,label] of [['export-litejam','Litejam Tab'],['export-alphatab','Alphatab']])$('#'+id).onclick=()=>{$('#export-menu').close();toast(label+' export is not configured yet');};
 $('#export-json').onclick=()=>{$('#export-menu').close();const data={format:'litejam-custom-picking',version:3,...state};const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));a.download='litejam-picking-pattern.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);toast('Pattern exported');};
+
+
+function updatePatternTitle(){
+ const title=normalizePatternTitle(state.title);
+ $('#pattern-title-text').textContent=title;
+ $('#pattern-title').setAttribute('aria-label','Rename pattern: '+title);
+ document.title=title==='LitejamTab Studio'?title:title+' · LitejamTab Studio';
+}
+let patternNameIntent='rename';
+function openPatternName(intent='rename'){
+ patternNameIntent=intent;
+ $('#pattern-name-heading').textContent=intent==='copy'?'Save a copy':'Pattern name';
+ $('#pattern-name-apply').textContent=intent==='copy'?'Save copy':'Apply';
+ $('#pattern-name-input').value=normalizePatternTitle(state.title)+(intent==='copy'?' copy':'');
+ $('#pattern-name-error').textContent='';
+ $('#pattern-name-dialog').showModal();$('#pattern-name-input').focus();$('#pattern-name-input').select();
+}
+function savePattern(copy=false,title=state.title){
+ try{
+  const item=saveToPatternLibrary(localStorage,{...state,title},{copy});
+  state.libraryId=item.id;state.title=item.name;
+  persist();updatePatternTitle();toast(copy?'Copy saved to library':'Saved to library');
+  return true;
+ }catch(error){const message=error?.name==='QuotaExceededError'?'Browser storage is full. Export your pattern or free some space.':error.message||'The pattern could not be saved.';if($('#pattern-name-dialog').open)$('#pattern-name-error').textContent=message;toast(message);return false;}
+}
+function openLibraryPattern(item){
+ if(!valid(item.pattern)){toast('This pattern could not be opened.');return;}
+ player.stop();audition.stop();cancelHold();cancelBarGesture();closeFretEditor();
+ state=normalizePattern(structuredClone(item.pattern));state.libraryId=item.id;state.title=normalizePatternTitle(item.name);
+ history=[];copiedChord=null;
+ $('#pattern-library').close();persist();render();$('#grid-scroll').scrollLeft=0;toast('Pattern opened');
+}
+function renderPatternLibrary(){
+ const list=$('#library-list');list.replaceChildren();
+ try{
+  const items=readPatternLibrary(localStorage).sort((a,b)=>b.updatedAt-a.updatedAt);
+  $('#library-message').textContent=items.length?'':'No saved patterns yet. Use Save to add this pattern.';
+  for(const item of items){
+   const row=document.createElement('div');row.className='library-item';
+   const info=document.createElement('div');info.className='library-item-info';
+   const name=document.createElement('h3');name.className='library-item-name';name.textContent=item.name;info.append(name);
+   const meta=document.createElement('p');meta.className='library-item-meta';
+   const count=item.pattern.bars?.length??1;
+   meta.textContent=count+' '+(count===1?'bar':'bars')+' · '+item.pattern.signature+'/'+(isCompound(item.pattern)?8:4)+' · '+item.pattern.tempo+' BPM · '+new Date(item.updatedAt).toLocaleDateString();
+   info.append(meta);
+   if(item.id===state.libraryId){const current=document.createElement('div');current.className='library-item-current';current.textContent='Current pattern';info.append(current);}
+   const open=document.createElement('button');open.textContent='Open';open.setAttribute('aria-label','Open '+item.name);open.onclick=()=>openLibraryPattern(item);
+   row.append(info,open);list.append(row);
+  }
+ }catch(error){$('#library-message').textContent=error.message;}
+}
+$('#pattern-title').onclick=()=>openPatternName();
+$('#pattern-name-cancel').onclick=()=>$('#pattern-name-dialog').close();
+$('#pattern-name-form').onsubmit=e=>{
+ e.preventDefault();
+ const title=$('#pattern-name-input').value.trim();
+ if(!title){$('#pattern-name-error').textContent='Enter a pattern name.';return;}
+ if(patternNameIntent==='copy'){
+  if(!savePattern(true,title))return;
+ }else{
+  history.push(structuredClone(state));if(history.length>60)history.shift();
+  state.title=normalizePatternTitle(title);persist();updatePatternTitle();$('#undo').disabled=false;
+ }
+ $('#pattern-name-dialog').close();
+};
+$('#library-save').onclick=()=>savePattern();
+$('#library-open').onclick=()=>{renderPatternLibrary();$('#pattern-library').showModal();};
+$('#library-close').onclick=()=>$('#pattern-library').close();
+$('#library-copy').onclick=()=>{$('#pattern-library').close();openPatternName('copy');};
 
 let fretTarget=null,holdGesture=null,suppressedTabClick=null;
 function resolveFretTarget(target){
