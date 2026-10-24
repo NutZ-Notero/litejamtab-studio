@@ -436,7 +436,7 @@ class PatternPlayer{
  }
  sound(event,time){
   if(event.type==='slap'){this.slap(time,event.accent);return;}
-  const stagger=event.type==='strum'?.020:0;
+  const stagger=event.type==='strum'?.030:0;
   event.notes.forEach((note,index)=>{
    const offset=index*stagger,duration=note.seconds-offset;
    // A rest or new attack can interrupt a stroke before its final strings.
@@ -642,7 +642,7 @@ $('#fret-form').addEventListener('submit',e=>{
 function tooltipText(button){
  const {action,help,beat,step,string}=button.dataset;
  const b=Number(beat),si=Number(step),s=activeBeats(state)[b]?.steps[si];
- const strumTip=s?.direction==='up'?'Up arrow · Strum downward\nPlay from bass to treble, with 20 ms between strings.':'Down arrow · Strum upward\nPlay from treble to bass, with 20 ms between strings.';
+ const strumTip=s?.direction==='up'?'Up arrow · Strum downward\nPlay from bass to treble, with 30 ms between strings.':'Down arrow · Strum upward\nPlay from treble to bass, with 30 ms between strings.';
  if(action==='type')return ({finger:'PIMA · Fingerpicking\nPlay the assigned fingers in this beat.',rest:'Rest\nStop all previous sounds at this beat.',slap:'X · Slap\nSlap the strings at this beat.',blank:'Blank\nSustain previous sounds through this beat.',strum:'Arrow\nPlay the strumming up or down'})[s?.type]??'';
  if(action==='division'){
   const duration=durationName(state,b),compound=isCompound(state);
