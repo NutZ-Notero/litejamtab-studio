@@ -297,7 +297,7 @@ function playbackTimeline(state){
   }
  }
  for(const string of held.keys())release(string,duration);
- return {events:timeline,duration};
+ return {events:timeline,duration,barDuration};
 }
 
 // Web Audio renders MIDI pitches locally, with no downloads or device permissions.
@@ -368,9 +368,13 @@ class PatternPlayer{
    const note=event?.notes.find(note=>note.string===voice.string&&note.midi===voice.midi);
    const end=note?Math.max(cutoff,this.startTime+event.start+note.seconds):cutoff;
    const gain=voice.gain.gain;
+   const level=voice.levelAt?.(cutoff)??.012;
    gain.cancelScheduledValues?.(cutoff);
-   gain.setValueAtTime(0,end);
+   gain.setValueAtTime(level,cutoff);
+   gain.setValueAtTime(level,Math.max(cutoff,end-.001));
+   gain.linearRampToValueAtTime(0,end);
    voice.source.stop(end);voice.end=end;
+   voice.levelAt=at=>at<end?level:0;
    voice.eventStart=(voice.eventStart*ratio);
   }
   this.lastPosition='';this.cancel(this.timer);this.tick();
@@ -408,7 +412,9 @@ class PatternPlayer{
   while(true){
    const cycle=Math.floor(this.next/list.length),event=list[this.next%list.length];
    const time=this.startTime+cycle*duration+event.start;
-   if(time>=this.endTime||time>now+.25)break;
+   // Queue two bars on the audio clock so layout/scroll stalls cannot skip subdivisions.
+   const lookahead=Math.max(.5,2*this.timeline.barDuration);
+   if(time>=this.endTime||time>now+lookahead)break;
    this.sound(event,Math.max(now,time));this.next++;
   }
   if(now>=this.startTime){
@@ -448,11 +454,16 @@ class PatternPlayer{
   }
   source.setPeriodicWave(this.wave);source.frequency.setValueAtTime(440*Math.pow(2,(midi-69)/12),time);
   const end=time+duration;
-  gain.gain.setValueAtTime(.095*velocity,time);
-  // Keep the natural guitar decay, but stop exactly at the next note/rest with no release tail.
-  gain.gain.setTargetAtTime(.012*velocity,time,.35);
-  gain.gain.setValueAtTime(0,end);
-  return this.track(source,gain,time,end);
+  // Sub-millisecond edge smoothing prevents waveform clicks without a release tail or gap.
+  const edge=Math.min(.001,duration/4),peak=.095*velocity,floor=.012*velocity;
+  gain.gain.setValueAtTime(0,time);
+  gain.gain.linearRampToValueAtTime(peak,time+edge);
+  gain.gain.setTargetAtTime(floor,time+edge,.35);
+  const release=end-edge;
+  gain.gain.setValueAtTime(floor+(peak-floor)*Math.exp(-(release-time-edge)/.35),release);
+  gain.gain.linearRampToValueAtTime(0,end);
+  const voice=this.track(source,gain,time,end);
+  return Object.assign(voice,{levelAt:at=>at<=time?0:at<time+edge?peak*(at-time)/edge:at<release?floor+(peak-floor)*Math.exp(-(at-time-edge)/.35):at<end?(floor+(peak-floor)*Math.exp(-(release-time-edge)/.35))*(end-at)/edge:0});
  }
  slap(time,accent){
   const ctx=this.context,source=ctx.createBufferSource(),gain=ctx.createGain();
