@@ -265,14 +265,15 @@ function playbackNotes(event,mode){
  }
  return strings.map(string=>({string,midi:OPEN_STRING_MIDI[string]+(event.tab[string].fret??0)})).filter(note=>note.midi<=127);
 }
-function playbackTimeline(state){
+function playbackTimeline(state,scopeBar=null){
  const secondsPerQuarter=60/state.tempo;
  const barDuration=(isCompound(state)?state.signature/2:state.signature)*secondsPerQuarter;
- const timeline=(state.bars??[state]).flatMap((bar,barIndex)=>events({...state,...bar}).map(event=>({
-  ...event,bar:barIndex,start:barIndex*barDuration+event.at*secondsPerQuarter,
+ const bars=scopeBar===null?(state.bars??[state]):[(state.bars??[state])[scopeBar]];
+ const timeline=bars.flatMap((bar,barIndex)=>events({...state,...bar}).map(event=>({
+  ...event,bar:scopeBar??barIndex,start:barIndex*barDuration+event.at*secondsPerQuarter,
   seconds:event.duration*secondsPerQuarter,notes:playbackNotes(event,state.mode)
  })));
- const duration=barDuration*(state.bars?.length??1);
+ const duration=barDuration*bars.length;
  // Empty slots sustain each string independently, including across bar lines.
  const held=new Map();
  const release=(string,end)=>{
@@ -308,11 +309,12 @@ class PatternPlayer{
   return new Context();
  },schedule=(callback,delay)=>globalThis.setTimeout(callback,delay),cancel=timer=>globalThis.clearTimeout(timer)}={}){
   Object.assign(this,{onState,onPosition,onError,contextFactory,schedule,cancel});
-  this.context=null;this.running=false;this.loop=false;this.voices=new Set();this.generation=0;
+  this.context=null;this.running=false;this.loop=false;this.scopeBar=null;this.voices=new Set();this.generation=0;
  }
  async start(state){
   this.stop();const generation=++this.generation;
-  this.timeline=playbackTimeline(state);this.secondsPerQuarter=60/state.tempo;this.running=true;this.onState(true);
+  this.scopeBar=this.loop==='bar'?Math.max(0,Math.min(state.currentBar??0,(state.bars?.length??1)-1)):null;
+  this.timeline=playbackTimeline(state,this.scopeBar);this.secondsPerQuarter=60/state.tempo;this.running=true;this.onState(true);
   try{
    this.context??=this.contextFactory();
    await this.context.resume();
@@ -345,7 +347,8 @@ class PatternPlayer{
  }
  update(state){
   if(!this.running)return;
-  const nextTimeline=playbackTimeline(state);
+  if(this.scopeBar!==null)this.scopeBar=Math.min(this.scopeBar,(state.bars?.length??1)-1);
+  const nextTimeline=playbackTimeline(state,this.scopeBar);
   if(this.startTime===undefined){this.timeline=nextTimeline;return;}
   const now=this.context.currentTime,old=this.timeline;
   const cycle=Math.max(0,Math.floor((now-this.startTime)/old.duration));
@@ -379,16 +382,47 @@ class PatternPlayer{
   }
   this.lastPosition='';this.cancel(this.timer);this.tick();
  }
- setLoop(enabled){
-  this.loop=enabled;
+ setLoop(mode,state){
+  mode=mode===true?'all':mode===false?'off':mode;
+  if(!['off','all','bar'].includes(mode))return;
+  this.loop=mode==='off'?false:mode;
   if(!this.running||this.startTime===undefined)return;
   const now=this.context.currentTime;
-  this.endTime=enabled?Infinity:this.startTime+(Math.floor(Math.max(0,now-this.startTime)/this.timeline.duration)+1)*this.timeline.duration;
-  if(!enabled)this.next=Math.min(this.next,Math.round((this.endTime-this.startTime)/this.timeline.duration)*this.timeline.events.length);
-  if(!enabled)for(const voice of this.voices){
-   if(voice.start>=this.endTime){voice.source.stop();this.voices.delete(voice);}
-   else if(voice.end>this.endTime)voice.source.stop(this.endTime);
+  const scope=mode==='bar'?Math.max(0,Math.min(state.currentBar??0,(state.bars?.length??1)-1)):mode==='all'?null:this.scopeBar;
+  if(scope!==this.scopeBar){
+   const old=this.timeline,phase=Math.max(0,now-this.startTime)%old.duration;
+   const current=old.events.filter(event=>event.start<=phase+1e-9).at(-1)??old.events[0];
+   const target=scope??current.bar,same=current.bar===target;
+   const oldOffset=old.events.find(event=>event.bar===target)?.start??0;
+   const nextTimeline=playbackTimeline(state,scope);
+   const newOffset=nextTimeline.events.find(event=>event.bar===target)?.start??0;
+   this.startTime=now+(same?0:.03)-newOffset-(same?phase-oldOffset:0);
+   const cutoff=same?now+.002:now;
+   for(const voice of this.voices){
+    if(voice.start>=cutoff){voice.source.stop();this.voices.delete(voice);continue;}
+    const end=same?Math.min(voice.end,scope===null?Infinity:this.startTime+nextTimeline.duration):now+.001;
+    if(end<voice.end){
+     const gain=voice.gain.gain,edge=Math.max(now,end-.001);
+     const level=voice.levelAt?.(edge)??.012;
+     gain.cancelScheduledValues(edge);gain.setValueAtTime(level,edge);gain.linearRampToValueAtTime(0,end);
+     voice.source.stop(end);voice.end=end;
+    }
+    voice.eventStart=voice.eventStart-oldOffset+newOffset;
+   }
+   this.scopeBar=scope;this.timeline=nextTimeline;
+   this.next=nextTimeline.events.findIndex(event=>this.startTime+event.start>=cutoff-1e-9);
+   if(this.next<0)this.next=nextTimeline.events.length;
+   this.lastPosition='';
   }
+  this.endTime=this.loop?Infinity:this.startTime+(Math.floor(Math.max(0,now-this.startTime)/this.timeline.duration)+1)*this.timeline.duration;
+  if(!this.loop){
+   this.next=Math.min(this.next,Math.round((this.endTime-this.startTime)/this.timeline.duration)*this.timeline.events.length);
+   for(const voice of this.voices){
+    if(voice.start>=this.endTime){voice.source.stop();this.voices.delete(voice);}
+    else if(voice.end>this.endTime)voice.source.stop(this.endTime);
+   }
+  }
+  this.cancel(this.timer);this.tick();
  }
  stop(){
   ++this.generation;this.cancel(this.timer);this.timer=null;
@@ -831,14 +865,24 @@ $('#play').innerHTML=playSymbol;
 $('#play').onclick=()=>{
  if(player.running){player.stop();return;}
  cancelHold();cancelBarGesture();closeFretEditor();
- selectBar(state,0);$('#grid-scroll').scrollLeft=0;render();
+ if(player.loop!=='bar')selectBar(state,0);$('#grid-scroll').scrollLeft=0;render();
  player.start(structuredClone(state));
 };
+const loopIcon=$('#loop').innerHTML;
+function renderLoop(){
+ const bar=player.loop==='bar',enabled=!!player.loop;
+ const label=bar?'Repeat one bar':enabled?'Repeat all bars':'Repeat off';
+ $('#loop').innerHTML=bar?loopIcon.replace('</svg>','<text x="12" y="12.5" text-anchor="middle" dominant-baseline="middle" fill="currentColor" font-size="9" font-family="system-ui,sans-serif" font-weight="700">1</text></svg>'):loopIcon;
+ $('#loop').setAttribute('aria-pressed',String(enabled));
+ $('#loop').setAttribute('aria-label',label);
+ $('#loop').classList.toggle('selected',enabled);
+ $('#loop').title=label+(bar?' · click to turn off':enabled?' · click to repeat one bar':' · click to repeat all bars');
+}
 $('#loop').onclick=()=>{
- player.setLoop(!player.loop);$('#loop').setAttribute('aria-pressed',String(player.loop));
- $('#loop').classList.toggle('selected',player.loop);
- $('#loop').title=player.loop?'Loop on · click to finish at the end':'Loop off · click to repeat';
+ const mode=player.loop===false?'all':player.loop==='all'?'bar':'off';
+ player.setLoop(mode,state);renderLoop();
 };
+renderLoop();
 $('#tempo').onchange=e=>{
  const tempo=Number(e.target.value);
  if(Number.isFinite(tempo)&&tempo>=30&&tempo<=240)change(()=>state.tempo=tempo);
