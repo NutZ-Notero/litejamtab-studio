@@ -193,6 +193,38 @@ function assignSandboxFinger(fingers,index,value){
  return fingers.map((finger,i)=>i===index?value:finger);
 }
 
+// Treble-string assignments are shared; sandbox thumbs and default bass stay mode-specific.
+function syncSharedStep(s,mode){
+ s.sandboxFingers??=Array(6).fill('');
+ for(let i=0;i<3;i++){
+  if(mode==='sandbox'){
+   if(s.sandboxFingers[i]!=='p')s.fingers[i]=s.sandboxFingers[i];
+  }else if(s.sandboxFingers[i]!=='p')s.sandboxFingers[i]=s.fingers[i];
+ }
+}
+function forEachPickingStep(state,fn){
+ for(const bar of state.bars??[state])for(const beat of [...bar.beats,...(bar.compoundBeats??[])])for(const s of beat.steps)fn(s);
+}
+function migrateSharedFingers(state){
+ if(state.sharedFingersVersion===1)return;
+ forEachPickingStep(state,s=>{
+  s.sandboxFingers??=Array(6).fill('');
+  for(let i=0;i<3;i++){
+   const sandbox=s.sandboxFingers[i],defaultFinger=s.fingers[i];
+   const active=state.mode==='sandbox'?(sandbox==='p'?defaultFinger:sandbox):defaultFinger;
+   const other=state.mode==='sandbox'?defaultFinger:(sandbox==='p'?'':sandbox);
+   s.fingers[i]=active||other;
+   if(sandbox!=='p')s.sandboxFingers[i]=s.fingers[i];
+  }
+ });
+ state.sharedFingersVersion=1;
+}
+function switchMode(state,mode){
+ if(!['default','sandbox'].includes(mode))return;
+ forEachPickingStep(state,s=>syncSharedStep(s,state.mode));
+ state.mode=mode;
+}
+
 function parseFret(value){
  const input=String(value).trim();
  if(input==='')return null;
@@ -530,6 +562,7 @@ for(const bar of state.bars){
  if(state.defaultsVersion!==1)bar.beats[0].steps[0].accent=true;
 }
 state.defaultsVersion=1;
+migrateSharedFingers(state);
 selectBar(state,state.currentBar);
 const typeNames={strum:'Strumming',finger:'Fingerpicking',rest:'Rest',slap:'Slap',blank:'Blank'};
 const durationLabels={'quarter':'Quarter','eighth':'Eighth','sixteenth':'Sixteenth','dotted-quarter':'Dotted quarter'};
@@ -623,6 +656,7 @@ $('#grid').addEventListener('click',e=>{
   if(a.startsWith('sandbox')&&state.mode==='sandbox'){const i=+a.slice(7);if(Number.isInteger(i)&&i>=0&&i<6){s.sandboxFingers=assignSandboxFinger(s.sandboxFingers,i,nextSandboxFinger(s.sandboxFingers[i]));if(['p','i','m','a'].includes(s.sandboxFingers[i]))assignedString=i;}}
   if(a.startsWith('finger')&&state.mode==='default'){const i=+a.slice(-1);if(Number.isInteger(i)&&i>=0&&i<3){s.fingers[i]=nextFinger(s.fingers,i);if(['i','m','a'].includes(s.fingers[i]))assignedString=i;}}
   if(a==='direction')s.direction=cycle(s.direction,['down','up']);
+  if(a.startsWith('finger')||a.startsWith('sandbox'))syncSharedStep(s,state.mode);
  });
  if(a==='type'&&beat.steps[si].type==='slap')previewBeat(b,si,assignmentBar,'slap');
  else if((a==='type'||a==='direction')&&beat.steps[si].type==='strum')previewBeat(b,si,assignmentBar,'strum');
@@ -630,7 +664,7 @@ $('#grid').addEventListener('click',e=>{
  else if(a==='bass'||a.startsWith('finger')||a.startsWith('sandbox'))audition.stop();
 });
 $('#signature').onchange=e=>{const signature=+e.target.value;if([3,4,6,9,12].includes(signature))change(()=>state.signature=signature);};
-document.querySelectorAll('[data-mode]').forEach(btn=>btn.onclick=()=>change(()=>state.mode=btn.dataset.mode));
+document.querySelectorAll('[data-mode]').forEach(btn=>btn.onclick=()=>change(()=>switchMode(state,btn.dataset.mode)));
 $('#reset').onclick=()=>change(()=>{resetBar(state);toast('Current bar reset');});
 function navigateBar(index){
  cancelBarGesture();
