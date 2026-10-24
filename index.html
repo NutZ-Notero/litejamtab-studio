@@ -203,16 +203,16 @@ function syncSharedStep(s,mode){
  }
 }
 function forEachPickingStep(state,fn){
- for(const bar of state.bars??[state])for(const beat of [...bar.beats,...(bar.compoundBeats??[])])for(const s of beat.steps)fn(s);
+ for(const bar of state.bars??[state])for(const beat of [...bar.beats,...(bar.compoundBeats??[])])for(const s of beat.steps)fn(s,bar.mode??state.mode);
 }
 function migrateSharedFingers(state){
  if(state.sharedFingersVersion===1)return;
- forEachPickingStep(state,s=>{
+ forEachPickingStep(state,(s,mode)=>{
   s.sandboxFingers??=Array(6).fill('');
   for(let i=0;i<3;i++){
    const sandbox=s.sandboxFingers[i],defaultFinger=s.fingers[i];
-   const active=state.mode==='sandbox'?(sandbox==='p'?defaultFinger:sandbox):defaultFinger;
-   const other=state.mode==='sandbox'?defaultFinger:(sandbox==='p'?'':sandbox);
+   const active=mode==='sandbox'?(sandbox==='p'?defaultFinger:sandbox):defaultFinger;
+   const other=mode==='sandbox'?defaultFinger:(sandbox==='p'?'':sandbox);
    s.fingers[i]=active||other;
    if(sandbox!=='p')s.sandboxFingers[i]=s.fingers[i];
   }
@@ -221,8 +221,9 @@ function migrateSharedFingers(state){
 }
 function switchMode(state,mode){
  if(!['default','sandbox'].includes(mode))return;
- forEachPickingStep(state,s=>syncSharedStep(s,state.mode));
- state.mode=mode;
+ const bar=state.bars?.[state.currentBar]??state;
+ for(const beat of [...bar.beats,...(bar.compoundBeats??[])])for(const s of beat.steps)syncSharedStep(s,bar.mode??state.mode);
+ bar.mode=mode;state.mode=mode;
 }
 
 function parseFret(value){
@@ -237,27 +238,29 @@ function addExampleChord(s){
  s.tab=[{fret:0,color:'white'},{fret:1,color:'red'},{fret:0,color:'white'},{fret:2,color:'green'},{fret:3,color:'blue'},{fret:null,color:'red'}];
 }
 
-// Bars share the time signature and mode, while retaining independent rhythm and TAB data.
+// Bars share the time signature; each retains its own mode, rhythm, and TAB data.
 function valid(s){
  if(!validPattern(s))return false;
  if(s.bars===undefined)return true;
- return Array.isArray(s.bars)&&s.bars.length>0&&Number.isInteger(s.currentBar)&&s.currentBar>=0&&s.currentBar<s.bars.length&&s.bars.every(bar=>bar&&validPattern({...s,beats:bar.beats,compoundBeats:bar.compoundBeats}));
+ return Array.isArray(s.bars)&&s.bars.length>0&&Number.isInteger(s.currentBar)&&s.currentBar>=0&&s.currentBar<s.bars.length&&s.bars.every(bar=>bar&&validPattern({...s,mode:bar.mode??s.mode,beats:bar.beats,compoundBeats:bar.compoundBeats}));
 }
 function initializeBars(state){
- state.bars??=[{beats:state.beats,compoundBeats:state.compoundBeats}];
+ state.bars??=[{mode:state.mode,beats:state.beats,compoundBeats:state.compoundBeats}];
+ for(const bar of state.bars)bar.mode??=state.mode;
  state.currentBar??=0;
  selectBar(state,state.currentBar);
 }
 function selectBar(state,index){
  if(!Number.isInteger(index)||index<0||index>=state.bars.length)return false;
  state.currentBar=index;
+ state.mode=state.bars[index].mode??state.mode;
  state.beats=state.bars[index].beats;
  state.compoundBeats=state.bars[index].compoundBeats;
  return true;
 }
 function appendBar(state){
  const fresh=initial();
- state.bars.push({beats:fresh.beats,compoundBeats:fresh.compoundBeats});
+ state.bars.push({mode:state.mode,beats:fresh.beats,compoundBeats:fresh.compoundBeats});
  selectBar(state,state.bars.length-1);
 }
 function deleteBar(state){
@@ -268,7 +271,7 @@ function deleteBar(state){
 }
 function resetBar(state){
  const fresh=initial();
- state.bars[state.currentBar]={beats:fresh.beats,compoundBeats:fresh.compoundBeats};
+ state.bars[state.currentBar]={mode:state.mode,beats:fresh.beats,compoundBeats:fresh.compoundBeats};
  selectBar(state,state.currentBar);
 }
 
@@ -302,8 +305,8 @@ function playbackTimeline(state,scopeBar=null){
  const barDuration=(isCompound(state)?state.signature/2:state.signature)*secondsPerQuarter;
  const bars=scopeBar===null?(state.bars??[state]):[(state.bars??[state])[scopeBar]];
  const timeline=bars.flatMap((bar,barIndex)=>events({...state,...bar}).map(event=>({
-  ...event,bar:scopeBar??barIndex,start:barIndex*barDuration+event.at*secondsPerQuarter,
-  seconds:event.duration*secondsPerQuarter,notes:playbackNotes(event,state.mode)
+  ...event,mode:bar.mode??state.mode,bar:scopeBar??barIndex,start:barIndex*barDuration+event.at*secondsPerQuarter,
+  seconds:event.duration*secondsPerQuarter,notes:playbackNotes(event,bar.mode??state.mode)
  })));
  const duration=barDuration*bars.length;
  // Empty slots sustain each string independently, including across bar lines.
@@ -318,9 +321,9 @@ function playbackTimeline(state,scopeBar=null){
   if(event.type==='rest'||event.type==='slap'){
    for(const string of held.keys())release(string,event.start);
   }else if(event.type==='finger'){
-   const fingers=state.mode==='sandbox'?event.sandboxFingers:event.fingers;
+   const fingers=event.mode==='sandbox'?event.sandboxFingers:event.fingers;
    fingers.forEach((finger,string)=>{if(finger==='rest')release(string,event.start);});
-   if(state.mode!=='sandbox'&&event.bass==='rest'){
+   if(event.mode!=='sandbox'&&event.bass==='rest'){
     for(const string of [3,4,5])release(string,event.start);
    }
   }
@@ -863,6 +866,7 @@ let highlightedColumn=null;
 const audition=new PatternPlayer({contextFactory:()=>player.context??=player.contextFactory(),onError:message=>toast(message)});
 function previewBeat(beat,sub,barIndex=state.currentBar,string=null){
  const bar=state.bars[barIndex];if(!bar)return;
+ const mode=bar.mode??state.mode;
  const event=events({...state,...bar}).find(event=>event.beat===beat&&event.sub===sub);
  if(!event)return;
  if(string==='slap')event.type='slap';
@@ -873,11 +877,11 @@ function previewBeat(beat,sub,barIndex=state.currentBar,string=null){
   if(!event.tab.some(note=>note.fret!==null))event.tab=event.tab.map(note=>({...note,fret:0}));
  }else if(string!==null){
   // Audition every assigned finger in this slot, using open strings for blank TAB.
-  const sounding=new Set(playbackNotes({...event,type:'finger'},state.mode).map(note=>note.string));
+  const sounding=new Set(playbackNotes({...event,type:'finger'},mode).map(note=>note.string));
   event.tab=event.tab.map((note,index)=>({...note,fret:sounding.has(index)?note.fret??0:null}));
   event.type='finger';
  }
- audition.preview(event,state.mode,state.tempo,string==='slap');
+ audition.preview(event,mode,state.tempo,string==='slap');
 }
 const player=new PatternPlayer({
  onState:running=>{
