@@ -428,9 +428,12 @@ class PatternPlayer{
  }
  sound(event,time){
   if(event.type==='slap'){this.slap(time,event.accent);return;}
-  // Fit the complete stroke inside short subdivisions while keeping up to 30 ms per string.
-  const strokeWindow=Math.min(event.seconds,...event.notes.map(note=>note.seconds));
-  const stagger=event.type==='strum'?Math.min(.030,strokeWindow/Math.max(1,event.notes.length)):0;
+  // Use the actual ringing length: blank/hold slots extend the note value.
+  const ringingSeconds=event.strumSeconds??Math.min(...event.notes.map(note=>note.seconds));
+  const sixteenthSeconds=event.seconds/event.duration/4;
+  const simultaneous=ringingSeconds<=sixteenthSeconds+1e-9;
+  const strokeWindow=Math.min(event.seconds,ringingSeconds);
+  const stagger=event.type==='strum'&&!simultaneous?Math.min(.030,strokeWindow/Math.max(1,event.notes.length)):0;
   event.notes.forEach((note,index)=>{
    const offset=index*stagger,duration=note.seconds-offset;
    if(duration>0){
@@ -642,7 +645,7 @@ $('#fret-form').addEventListener('submit',e=>{
 function tooltipText(button){
  const {action,help,beat,step,string}=button.dataset;
  const b=Number(beat),si=Number(step),s=activeBeats(state)[b]?.steps[si];
- const strumTip=s?.direction==='up'?'Up arrow · Strum downward\nPlay from bass to treble, with 30 ms between strings.':'Down arrow · Strum upward\nPlay from treble to bass, with 30 ms between strings.';
+ const strumTip=s?.direction==='up'?'Up arrow · Strum downward\nPlay from bass to treble, with up to 30 ms between strings.\nIf the next note/rest cuts this stroke to a sixteenth note, play all strings together (0 ms).':'Down arrow · Strum upward\nPlay from treble to bass, with up to 30 ms between strings.\nIf the next note/rest cuts this stroke to a sixteenth note, play all strings together (0 ms).';
  if(action==='type')return ({finger:'PIMA · Fingerpicking\nPlay the assigned fingers in this beat.',rest:'Rest\nStop all previous sounds at this beat.',slap:'X · Slap\nSlap the strings at this beat.',blank:'Blank\nSustain previous sounds through this beat.',strum:'Arrow\nPlay the strumming up or down'})[s?.type]??'';
  if(action==='division'){
   const duration=durationName(state,b),compound=isCompound(state);
@@ -789,6 +792,8 @@ function previewBeat(beat,sub,barIndex=state.currentBar,string=null){
  const event=events({...state,...bar}).find(event=>event.beat===beat&&event.sub===sub);
  if(!event)return;
  if(string==='strum'){
+  const timed=playbackTimeline(state).events.find(item=>item.bar===barIndex&&item.beat===beat&&item.sub===sub);
+  if(timed?.notes.length)event.strumSeconds=Math.min(...timed.notes.map(note=>note.seconds));
   // With no TAB chord assigned, audition a strum across the open strings.
   if(!event.tab.some(note=>note.fret!==null))event.tab=event.tab.map(note=>({...note,fret:0}));
  }else if(string!==null){
