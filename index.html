@@ -369,7 +369,7 @@ class PatternPlayer{
    const end=note?Math.max(cutoff,this.startTime+event.start+note.seconds):cutoff;
    const gain=voice.gain.gain;
    gain.cancelScheduledValues?.(cutoff);
-   gain.setTargetAtTime?.(.0001,end,.002);
+   gain.setValueAtTime(0,end);
    voice.source.stop(end);voice.end=end;
    voice.eventStart=(voice.eventStart*ratio);
   }
@@ -403,12 +403,12 @@ class PatternPlayer{
   if(now>this.startTime){
    const cycle=Math.floor((now-this.startTime)/duration);
    this.next=Math.max(this.next,cycle*list.length);
-   while(this.startTime+Math.floor(this.next/list.length)*duration+list[this.next%list.length].start<now-.035)this.next++;
+   while(this.startTime+Math.floor(this.next/list.length)*duration+list[this.next%list.length].start<now-.25)this.next++;
   }
   while(true){
    const cycle=Math.floor(this.next/list.length),event=list[this.next%list.length];
    const time=this.startTime+cycle*duration+event.start;
-   if(time>=this.endTime||time>now+.10)break;
+   if(time>=this.endTime||time>now+.25)break;
    this.sound(event,Math.max(now,time));this.next++;
   }
   if(now>=this.startTime){
@@ -422,11 +422,12 @@ class PatternPlayer{
  }
  sound(event,time){
   if(event.type==='slap'){this.slap(time,event.accent);return;}
-  const stagger=event.type==='strum'?.030:0;
+  // Fit the complete stroke inside short subdivisions while keeping up to 30 ms per string.
+  const strokeWindow=Math.min(event.seconds,...event.notes.map(note=>note.seconds));
+  const stagger=event.type==='strum'?Math.min(.030,strokeWindow/Math.max(1,event.notes.length)):0;
   event.notes.forEach((note,index)=>{
    const offset=index*stagger,duration=note.seconds-offset;
-   // A rest or new attack can interrupt a stroke before its final strings.
-   if(duration>.004){
+   if(duration>0){
     const voice=this.pluck(note.midi,time+offset,duration,event.accent?1:.7);
     if(voice)Object.assign(voice,{midi:note.midi,string:note.string,eventStart:event.start});
    }
@@ -447,11 +448,11 @@ class PatternPlayer{
   }
   source.setPeriodicWave(this.wave);source.frequency.setValueAtTime(440*Math.pow(2,(midi-69)/12),time);
   const end=time+duration;
-  gain.gain.setValueAtTime(.0001,time);gain.gain.exponentialRampToValueAtTime(.095*velocity,time+.004);
-  // Decay independently of note length, then release only at the actual stop/next note.
-  gain.gain.setTargetAtTime(.012*velocity,time+.004,.35);
-  gain.gain.setTargetAtTime(.0001,end,.002);
-  return this.track(source,gain,time,end+.012);
+  gain.gain.setValueAtTime(.095*velocity,time);
+  // Keep the natural guitar decay, but stop exactly at the next note/rest with no release tail.
+  gain.gain.setTargetAtTime(.012*velocity,time,.35);
+  gain.gain.setValueAtTime(0,end);
+  return this.track(source,gain,time,end);
  }
  slap(time,accent){
   const ctx=this.context,source=ctx.createBufferSource(),gain=ctx.createGain();
