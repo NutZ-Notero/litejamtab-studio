@@ -467,8 +467,8 @@ class PatternPlayer{
   const eighthSeconds=event.seconds/event.duration/2;
   const simultaneous=ringingSeconds<=eighthSeconds+1e-9;
   const strokeWindow=Math.min(event.seconds,ringingSeconds);
-  // 25 ms at 40 BPM, scaled inversely with tempo (1000 / BPM milliseconds).
-  const strumSpacing=.025*40/60*(event.seconds/event.duration);
+  // 20 ms at 40 BPM, scaled inversely with tempo (800 / BPM milliseconds).
+  const strumSpacing=.020*40/60*(event.seconds/event.duration);
   const stagger=event.type==='strum'&&!simultaneous?Math.min(strumSpacing,strokeWindow/Math.max(1,event.notes.length)):0;
   event.notes.forEach((note,index)=>{
    const offset=index*stagger,duration=note.seconds-offset;
@@ -681,7 +681,7 @@ $('#fret-form').addEventListener('submit',e=>{
 function tooltipText(button){
  const {action,help,beat,step,string}=button.dataset;
  const b=Number(beat),si=Number(step),s=activeBeats(state)[b]?.steps[si];
- const strumTip=(s?.direction==='up'?'Up arrow · Strum downward':'Down arrow · Strum upward')+`\nPlay from ${s?.direction==='up'?'bass to treble':'treble to bass'}, with ${(1000/state.tempo).toFixed(2)} ms between strings (25 ms at 40 BPM, scaled with tempo).\nIf the next note/rest cuts this stroke to an eighth note or shorter, play all strings together (0 ms).`;
+ const strumTip=(s?.direction==='up'?'Up arrow · Strum downward':'Down arrow · Strum upward')+`\nPlay from ${s?.direction==='up'?'bass to treble':'treble to bass'}, with ${(800/state.tempo).toFixed(2)} ms between strings (20 ms at 40 BPM, scaled with tempo).\nIf the next note/rest cuts this stroke to an eighth note or shorter, play all strings together (0 ms).`;
  if(action==='type')return ({finger:'PIMA · Fingerpicking\nPlay the assigned fingers in this beat.',rest:'Rest\nStop all previous sounds at this beat.',slap:'X · Slap\nSlap the strings at this beat.',blank:'Blank\nSustain previous sounds through this beat.',strum:'Arrow\nPlay the strumming up or down'})[s?.type]??'';
  if(action==='division'){
   const duration=durationName(state,b),compound=isCompound(state);
