@@ -42,7 +42,7 @@
 .bar-navigation button:focus-visible,#bar-delete:focus-visible{outline:2px solid #81ee39;outline-offset:3px}
 #bar-previous{grid-column:1}#bar-position{grid-column:2;white-space:nowrap;color:#eee;font:500 18px/1.4 system-ui;font-variant-numeric:tabular-nums}#bar-next{grid-column:3}
 #bar-delete{position:absolute;right:20px;bottom:12px;border:0;background:transparent;color:#ddd;font:14px system-ui;padding:7px 8px;cursor:pointer;border-radius:7px}
-@media (hover:hover) and (pointer:fine){#bar-delete:hover{background:#ffffff10;color:#fff}}
+
 .bar-controls [hidden]{display:none!important}
 @media(max-width:600px){.bar-controls{min-height:86px;padding:12px 60px 26px}.bar-navigation{gap:4px;grid-template-columns:38px auto 38px}.bar-navigation button{width:38px;font-size:42px}#bar-position{font-size:15px}#bar-delete{right:9px;font-size:12px}}
 
@@ -188,16 +188,14 @@ main{padding-bottom:110px}
 #bar-duplicate{position:static;min-height:44px;border:0;background:transparent;color:#ddd;font:14px system-ui;padding:7px 8px;cursor:pointer;border-radius:7px}
 #bar-duplicate:focus-visible{outline:2px solid #81ee39;outline-offset:3px}
 @media(max-width:600px){#bar-duplicate{font-size:12px}}
-@media (hover:hover) and (pointer:fine){#bar-duplicate:hover{background:#ffffff10;color:#fff}}
+
 .bar-actions #bar-delete{position:static;min-height:44px}
 .bar-actions #bar-duplicate,.bar-actions #bar-delete{position:static;display:grid;place-items:center;width:44px;height:44px;padding:9px;border:1px solid #555;border-radius:9px;background:#292929;color:#eee;cursor:pointer}
 .bar-actions button svg{width:23px;height:23px;pointer-events:none}
-@media (hover:hover) and (pointer:fine){.bar-actions #bar-duplicate:hover{background:#3a3a3a;border-color:#83bc52}}
-@media (hover:hover) and (pointer:fine){.bar-actions #bar-delete:hover{background:#492d2b;border-color:#b86b65;color:#ffaaa3}}
-@media (hover:none){
+
+
 .bar-actions #bar-duplicate:active{background:#3a3a3a;border-color:#83bc52}
 .bar-actions #bar-delete:active{background:#492d2b;border-color:#b86b65;color:#ffaaa3}
-}
 </style></head>
 <body><svg xmlns="http://www.w3.org/2000/svg" id="asset-sprite" width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;overflow:hidden;pointer-events:none"></svg><main><header class="app-header"><h1>LitejamTab Studio</h1><div class="pattern-name-field"><input id="pattern-title" type="text" maxlength="80" autocomplete="off" aria-label="LitejamTab name" placeholder="Untitled LitejamTab"></div></header><section class="prototype" aria-label="LitejamTab Studio pattern editor"><div class="toolbar"><div class="tabs" aria-label="Editor mode"><button class="selected" data-mode="default">Default</button><button data-mode="sandbox">Sandbox</button></div><select id="signature" aria-label="Time signature"><option value="4">4/4</option><option value="3">3/4</option><option value="6">6/8</option><option value="9">9/8</option><option value="12">12/8</option></select></div>
 <div class="transport" role="group" aria-label="Playback"><button id="play" aria-label="Play" title="Play from start"></button><button id="loop" aria-label="Loop" aria-pressed="false" title="Loop off · click to repeat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11V7a3 3 0 0 1 3-3h13m-3-3 3 3-3 3M21 13v4a3 3 0 0 1-3 3H5m3-3-3 3 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><label class="tempo-control" title="Quarter-note beats per minute"><input id="tempo" type="number" min="30" max="240" step="1" value="80" aria-label="Tempo in quarter-note beats per minute"><span>BPM</span></label><span id="playback-status" class="sr-only" role="status">Stopped</span></div><p class="tooltip-hint">Press and hold any control to view its tooltip.</p><div class="grid-shell"><div class="row-labels"><div aria-hidden="true"></div><div aria-hidden="true"></div><div aria-hidden="true"></div><div class="board-label"><span class="vertical-board-label">BEAT</span><div class="neck-start" aria-hidden="true"></div></div><div class="beat-label" aria-hidden="true"></div><div class="board-label"><span class="vertical-board-label">TAB</span><div class="neck-start tab-neck-start" aria-hidden="true"></div></div><div class="chord-label-spacer" aria-hidden="true"></div></div><div id="grid-scroll" class="grid-scroll" tabindex="0" aria-label="Beat grid. Scroll horizontally when subdivisions exceed the available width"><div id="grid" class="grid"></div></div></div>
