@@ -982,6 +982,7 @@ $('#library-close').onclick=()=>$('#pattern-library').close();
 $('#library-copy').onclick=()=>{$('#pattern-library').close();openPatternName('copy');};
 
 let fretTarget=null,holdGesture=null,suppressedTabClick=null;
+let lastFretPreview=null;
 function resolveFretTarget(target){
  if(!target||!Number.isInteger(target.string)||target.string<0||target.string>=6||target.beat<0||target.beat>=state.signature||hiddenBeat(state,target.beat))return null;
  const bar=state.bars[target.bar??state.currentBar];
@@ -995,11 +996,25 @@ function updateFretPitch(){
  const current=resolveFretTarget(fretTarget);
  $('#fret-current-beat').textContent=current?beatPitchList(current,fretTarget.string,$('#fret-value').value):'—';
 }
-$('#fret-value').addEventListener('input',updateFretPitch);
-$('#fret-value').addEventListener('change',updateFretPitch);
+function previewEditedFret(){
+ const current=resolveFretTarget(fretTarget);
+ let fret;try{fret=parseFret($('#fret-value').value);}catch{fret=null;}
+ if(!current||fret===null){lastFretPreview=null;audition.stop();return;}
+ const target=fretTarget,key=[target.bar,target.beat,target.step,target.string,fret].join(':');
+ if(key===lastFretPreview)return;
+ lastFretPreview=key;
+ const bar=state.bars[target.bar];
+ const event=events({...state,...bar}).find(item=>item.beat===target.beat&&item.sub===target.step);
+ if(!event)return;
+ event.tab=emptyTab();event.tab[target.string].fret=fret;event.type='finger';
+ audition.preview(event,bar.mode??state.mode,state.tempo);
+}
+function onFretValueChange(){updateFretPitch();previewEditedFret();}
+$('#fret-value').addEventListener('input',onFretValueChange);
+$('#fret-value').addEventListener('change',onFretValueChange);
 function openFretEditor(beat,step,string){
  const target={bar:state.currentBar,beat,step,string},s=resolveFretTarget(target);if(!s)return;
- fretTarget=target;
+ fretTarget=target;lastFretPreview=null;
  $('#fret-position').textContent=`Count ${beat+1}${step?' · subdivision '+(step+1):''} · String ${string+1} (${'EBGDAE'[string]})`;
  $('#fret-value').value=s.tab[string].fret??'';
  updateFretPitch();
@@ -1007,9 +1022,9 @@ function openFretEditor(beat,step,string){
  const editor=$('#fret-editor');if(!editor.open)editor.showModal();
  $('#fret-value').focus();$('#fret-value').select();
 }
-function closeFretEditor(){fretTarget=null;$('#fret-editor').close();}
+function closeFretEditor(){fretTarget=null;lastFretPreview=null;audition.stop();$('#fret-editor').close();}
 $('#fret-cancel').onclick=closeFretEditor;
-$('#fret-editor').addEventListener('cancel',()=>{fretTarget=null;});
+$('#fret-editor').addEventListener('cancel',()=>{fretTarget=null;lastFretPreview=null;audition.stop();});
 $('#fret-form').addEventListener('submit',e=>{
  e.preventDefault();const s=resolveFretTarget(fretTarget);if(!s){closeFretEditor();return;}
  const value=$('#fret-value').value;
