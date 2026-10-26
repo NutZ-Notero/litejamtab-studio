@@ -1020,7 +1020,7 @@ function tooltipText(button){
  }
  if(action==='slap')return 'X · Slap\nClick to preview the slap sound.';
  if(action==='direction')return strumTip;
- if(action==='tab')return 'TAB Fretboard\nClick to enter a fret number.\nBlank uses the open string pitch (fret 0) when that string is played.\nApplying a blank value does not play a preview.';
+ if(action==='tab')return "TAB Fretboard\nClick to enter a fret number.\n\nFingerpicking: Blank plays the open string (fret 0).\n\nStrumming:\n• If any string has a fret assigned, blank strings are muted.\n• If all strings are blank, all six play as open strings (fret 0).";
  if(action==='chord')return 'Add from Chord\nClick to apply the example chord to this TAB column.';
  if(action==='copy-beat')return 'Copy beat\nCopy playback type, beat type, accent, fingers, bass and strum direction.';
  if(action==='paste-beat')return 'Paste beat\nReplace this beat’s playback settings and assignments. Beat type applies only at main-beat selectors.';
