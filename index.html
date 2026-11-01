@@ -484,15 +484,15 @@ function playbackTimeline(state,scopeBar=null){
   seconds:event.duration*secondsPerQuarter,decaySeconds:barDuration,notes:playbackNotes(event,bar.mode??state.mode)
  })));
  const duration=barDuration*bars.length;
- // Empty slots sustain each string across bar lines, for at most one full bar.
+ // Empty slots hold the previous notes across bar lines, for at most one full bar.
  const held=new Map();
  const release=(string,end)=>{
   const note=held.get(string);
   if(note){note.seconds=Math.min(end-note.start,barDuration);held.delete(string);}
  };
  for(const event of timeline){
-  // Each string rings until its own next attack/rest; a new strum replaces the stroke.
-  if(event.type==='strum')for(const string of held.keys())release(string,event.start);
+  // Any new played note replaces the previous sounding group; blank slots hold.
+  if(event.notes.length)for(const string of held.keys())release(string,event.start);
   if(event.type==='rest'||event.type==='slap'){
    for(const string of held.keys())release(string,event.start);
   }else if(event.type==='finger'){
