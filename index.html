@@ -576,13 +576,14 @@ class PatternPlayer{
   this.endTime=this.loop?Infinity:this.startTime+nextTimeline.duration;
   for(const voice of this.voices){
    if(voice.start>=cutoff){voice.source.stop();this.voices.delete(voice);continue;}
-   if(voice.end<=now||voice.midi===undefined)continue;
+   if(voice.end<=cutoff||voice.midi===undefined)continue;
    // Preserve a ringing note and adjust its release to the edited pattern.
    const event=nextTimeline.events.find(event=>Math.abs(event.start-voice.eventStart*ratio)<1e-8);
    const note=event?.notes.find(note=>note.string===voice.string&&note.midi===voice.midi);
    const end=note?Math.max(cutoff,this.startTime+event.start+note.seconds):cutoff;
    const gain=voice.gain.gain;
-   const level=voice.levelAt?.(cutoff)??.012;
+   const previousLevelAt=voice.levelAt;
+   const level=previousLevelAt?.(cutoff)??.012;
    gain.cancelScheduledValues?.(cutoff);
    gain.setValueAtTime(level,cutoff);
    const fadeEnd=this.startTime+(event?.start??0)+(event?.decaySeconds??0);
@@ -591,7 +592,7 @@ class PatternPlayer{
    gain.linearRampToValueAtTime(releaseLevel,release);
    gain.linearRampToValueAtTime(0,end);
    voice.source.stop(end);voice.end=end;
-   voice.levelAt=at=>at>=end?0:at<release?level+(releaseLevel-level)*Math.max(0,at-cutoff)/Math.max(.001,release-cutoff):releaseLevel*(end-at)/Math.max(.001,end-release);
+   voice.levelAt=at=>at<cutoff?(previousLevelAt?.(at)??level):at>=end?0:at<release?level+(releaseLevel-level)*Math.max(0,at-cutoff)/Math.max(.001,release-cutoff):releaseLevel*(end-at)/Math.max(.001,end-release);
    voice.eventStart=(voice.eventStart*ratio);
   }
   this.lastPosition='';this.cancel(this.timer);this.tick();
