@@ -484,11 +484,11 @@ function playbackTimeline(state,scopeBar=null){
   seconds:event.duration*secondsPerQuarter,notes:playbackNotes(event,bar.mode??state.mode)
  })));
  const duration=barDuration*bars.length;
- // Empty slots sustain each string independently, including across bar lines.
+ // Empty slots sustain each string across bar lines, for at most one full bar.
  const held=new Map();
  const release=(string,end)=>{
   const note=held.get(string);
-  if(note){note.seconds=end-note.start;held.delete(string);}
+  if(note){note.seconds=Math.min(end-note.start,barDuration);held.delete(string);}
  };
  for(const event of timeline){
   // Each string rings until its own next attack/rest; a new strum replaces the stroke.
