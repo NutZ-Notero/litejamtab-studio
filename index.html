@@ -213,8 +213,24 @@ main{padding-bottom:110px}
 #fret-pitch strong{color:#a4df65;font-size:16px;font-weight:600;margin-left:4px}
 #fret-pitch .fret-beat-summary{flex-basis:100%;overflow-wrap:anywhere}
 #fret-current-beat{word-spacing:4px}
+
+.drum-track{padding:8px 12px 22px;margin-bottom:14px}
+.drum-track h2{font-size:17px;font-weight:500;color:#c9c9c9;margin:0 0 12px}
+.drum-shell{display:flex;min-width:0}.drum-labels{width:105px;flex:0 0 105px}
+.drum-labels>div{height:46px;display:flex;align-items:center;font-size:14px}
+.drum-scroll{overflow-x:auto;min-width:0;flex:1;scrollbar-width:thin}
+.drum-grid{display:grid;grid-template-columns:repeat(var(--drum-steps),minmax(58px,1fr));min-width:calc(var(--drum-steps)*58px)}
+.drum-slot{text-align:center;min-width:0}.drum-control-row,.drum-cell{height:46px;display:flex;align-items:center;justify-content:center}
+.drum-cell{background:#242424;border-bottom:1px solid #ffffff09}
+.drum-hit{touch-action:manipulation;-webkit-touch-callout:none;user-select:none;width:30px;height:30px;border:1px solid #ddd;border-radius:50%;background:#242424;color:#111;font-weight:600;padding:0;font-size:17px;display:flex;align-items:center;justify-content:center}
+.drum-hit.red{background:#ff4c25;border-color:#ff4c25}.drum-hit.green{background:#7fed2a;border-color:#7fed2a}.drum-hit.blue{background:#0696ed;border-color:#0696ed}.drum-hit.yellow{background:#ffe02a;border-color:#ffe02a}.drum-hit.rest{background:#eee}
+.drum-hit.rest .asset-image{width:21px;height:26px}
+.drum-hit:active{filter:brightness(1.3)}.drum-count{height:44px;display:flex;align-items:center;justify-content:center;font-size:24px}
+.drum-slot.is-playing{outline:2px solid #72cf00;outline-offset:-2px;background:#72cf0015}
+.drum-control-row .control{width:34px;height:34px}
+@media(max-width:650px){.drum-track{padding:6px 8px 16px}.drum-labels{width:75px;flex-basis:75px}.drum-labels>div{font-size:12px}}
 </style></head>
-<body><svg xmlns="http://www.w3.org/2000/svg" id="asset-sprite" width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;overflow:hidden;pointer-events:none"></svg><main><header class="app-header"><h1>LitejamTab Studio</h1><div class="pattern-name-field"><input id="pattern-title" type="text" maxlength="80" autocomplete="off" aria-label="LitejamTab name" placeholder="Untitled LitejamTab"></div></header><section class="prototype" aria-label="LitejamTab Studio pattern editor"><div class="toolbar"><div class="tabs" aria-label="Editor mode"><button class="selected" data-mode="default">Default</button><button data-mode="sandbox">Sandbox</button></div><select id="signature" aria-label="Time signature"><option value="4">4/4</option><option value="3">3/4</option><option value="6">6/8</option><option value="9">9/8</option><option value="12">12/8</option></select></div>
+<body><svg xmlns="http://www.w3.org/2000/svg" id="asset-sprite" width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;overflow:hidden;pointer-events:none"></svg><main><header class="app-header"><h1>LitejamTab Studio</h1><div class="pattern-name-field"><input id="pattern-title" type="text" maxlength="80" autocomplete="off" aria-label="LitejamTab name" placeholder="Untitled LitejamTab"></div></header><section class="prototype" aria-label="LitejamTab Studio pattern editor"><div id="drum-track" class="drum-track" aria-label="Drum Track"></div><div class="toolbar"><div class="tabs" aria-label="Editor mode"><button class="selected" data-mode="default">Default</button><button data-mode="sandbox">Sandbox</button></div><select id="signature" aria-label="Time signature"><option value="4">4/4</option><option value="3">3/4</option><option value="6">6/8</option><option value="9">9/8</option><option value="12">12/8</option></select></div>
 <div class="transport" role="group" aria-label="Playback"><button id="play" aria-label="Play" title="Play from start"></button><button id="loop" aria-label="Loop" aria-pressed="false" title="Loop off · click to repeat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11V7a3 3 0 0 1 3-3h13m-3-3 3 3-3 3M21 13v4a3 3 0 0 1-3 3H5m3-3-3 3 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><label class="tempo-control" title="Quarter-note beats per minute"><input id="tempo" type="number" min="30" max="240" step="1" value="80" aria-label="Tempo in quarter-note beats per minute"><span>BPM</span></label><span id="playback-status" class="sr-only" role="status">Stopped</span></div><p class="tooltip-hint">Press and hold any control to view its tooltip.</p><div class="grid-shell"><div class="row-labels"><div aria-hidden="true"></div><div aria-hidden="true"></div><div aria-hidden="true"></div><div class="beat-clipboard-spacer" aria-hidden="true"></div><div class="board-label"><span class="vertical-board-label">BEAT</span><div class="neck-start" aria-hidden="true"></div></div><div class="beat-label" aria-hidden="true"></div><div class="board-label"><span class="vertical-board-label">TAB</span><div class="neck-start tab-neck-start" aria-hidden="true"></div></div><div class="chord-label-spacer" aria-hidden="true"></div></div><div id="grid-scroll" class="grid-scroll" tabindex="0" aria-label="Beat grid. Scroll horizontally when subdivisions exceed the available width"><div id="grid" class="grid"></div></div></div>
 <div class="bar-controls"><nav class="bar-navigation" aria-label="Bar navigation"><button id="bar-previous" aria-label="Previous bar" hidden>&lt;</button><span id="bar-position" aria-live="polite">BAR 1/1</span><button id="bar-next" aria-label="Create new bar">+</button></nav><div id="bar-box-scroll" class="bar-box-scroll" aria-label="Bars. Scroll to see more"><div id="bar-boxes" class="bar-boxes" role="group" aria-label="Jump to a bar. Hold 1 second and drag to swap; keyboard: Alt plus left or right arrow"></div></div><span id="bar-box-status" class="sr-only" role="status"></span><div class="bar-actions"><button id="bar-duplicate" type="button" aria-label="Duplicate current bar" title="Duplicate current bar"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button id="bar-delete" type="button" aria-label="Delete current bar" title="Delete current bar" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2M5 6l1 14h12l1-14M10 10v6m4-6v6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div></div></section><div class="utility"><span id="save-status" role="status">Changes saved on this device</span><div><button id="undo" disabled>Undo</button><button id="reset">Reset</button><button id="export" aria-haspopup="dialog" aria-controls="export-menu">Export</button><dialog id="export-menu" aria-labelledby="export-title"><h2 id="export-title">Export</h2><div class="export-options"><button id="export-litejam">Litejam Tab</button><button id="export-alphatab">Alphatab</button><button id="export-json">JSON</button></div><button id="export-cancel">Cancel</button></dialog></div></div><span id="step-count" hidden></span><span id="pattern-name" hidden></span></main><div class="project-dock" role="group" aria-label="Pattern files"><button id="library-open" aria-label="Open pattern library" title="Open pattern library" aria-haspopup="dialog" aria-controls="pattern-library"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v1M3 7h16a2 2 0 0 1 2 2l-2 10H3L1 9a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button><button id="library-save" aria-label="Save pattern" title="Save this pattern to your library"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12l4 4v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm2 0v6h10V3M7 21v-8h10v8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></button></div>
 <dialog id="pattern-library" class="project-dialog" aria-labelledby="library-title"><div class="project-dialog-heading"><div><h2 id="library-title">Your library</h2><p>Saved in this browser on this device.</p></div><button id="library-close" class="dialog-close" aria-label="Close library">×</button></div><p id="library-message" role="status"></p><div id="library-list"></div><div class="project-dialog-actions"><button id="library-copy">Save a copy</button><button id="library-new" class="project-primary">New Tab</button></div></dialog>
@@ -271,7 +287,7 @@ function pasteBeatSlot(state,beat,sub,copied){
  syncSharedStep(s,state.mode);
 }
 function validStep(x){return x&&(x.tab===undefined||(Array.isArray(x.tab)&&x.tab.length===6&&x.tab.every(n=>n&&(n.fret===null||(Number.isInteger(n.fret)&&n.fret>=0&&n.fret<=99))&&TAB_COLORS.includes(n.color))))&&TYPES.includes(x.type)&&typeof x.accent==='boolean'&&['up','down'].includes(x.direction)&&['','p1','p2','rest'].includes(x.bass)&&Array.isArray(x.fingers)&&x.fingers.length===3&&x.fingers.every(f=>['','i','m','a','rest'].includes(f))&&(x.sandboxFingers===undefined||(Array.isArray(x.sandboxFingers)&&x.sandboxFingers.length===6&&x.sandboxFingers.every(f=>['','p','i','m','a','rest'].includes(f))));}
-function validPattern(s){return s&&[3,4,6,9,12].includes(s.signature)&&Number.isFinite(s.tempo)&&s.tempo>=30&&s.tempo<=240&&['default','sandbox'].includes(s.mode)&&Array.isArray(s.beats)&&s.beats.length===4&&s.beats.every(b=>[1,2,4].includes(b.division)&&Array.isArray(b.steps)&&b.steps.length===4&&b.steps.every(validStep))&&(s.compoundBeats===undefined?!isCompound(s):Array.isArray(s.compoundBeats)&&[9,12].includes(s.compoundBeats.length)&&s.compoundBeats.every((b,i)=>(i%3===0?[0,1,2]:[1,2]).includes(b.division)&&Array.isArray(b.steps)&&b.steps.length===2&&b.steps.every(validStep)));}
+function validPattern(s){return s&&validDrumBeats(s.drumBeats,false)&&validDrumBeats(s.drumCompoundBeats,true)&&[3,4,6,9,12].includes(s.signature)&&Number.isFinite(s.tempo)&&s.tempo>=30&&s.tempo<=240&&['default','sandbox'].includes(s.mode)&&Array.isArray(s.beats)&&s.beats.length===4&&s.beats.every(b=>[1,2,4].includes(b.division)&&Array.isArray(b.steps)&&b.steps.length===4&&b.steps.every(validStep))&&(s.compoundBeats===undefined?!isCompound(s):Array.isArray(s.compoundBeats)&&[9,12].includes(s.compoundBeats.length)&&s.compoundBeats.every((b,i)=>(i%3===0?[0,1,2]:[1,2]).includes(b.division)&&Array.isArray(b.steps)&&b.steps.length===2&&b.steps.every(validStep)));}
 
 // A finger may pick only one treble string at the same instant.
 function nextFinger(fingers,index){
@@ -338,7 +354,7 @@ function addExampleChord(s){
 function valid(s){
  if(!validPattern(s))return false;
  if(s.bars===undefined)return true;
- return Array.isArray(s.bars)&&s.bars.length>0&&Number.isInteger(s.currentBar)&&s.currentBar>=0&&s.currentBar<s.bars.length&&s.bars.every(bar=>bar&&validPattern({...s,mode:bar.mode??s.mode,beats:bar.beats,compoundBeats:bar.compoundBeats}));
+ return Array.isArray(s.bars)&&s.bars.length>0&&Number.isInteger(s.currentBar)&&s.currentBar>=0&&s.currentBar<s.bars.length&&s.bars.every(bar=>bar&&validPattern({...s,...bar,mode:bar.mode??s.mode}));
 }
 function initializeBars(state){
  state.bars??=[{mode:state.mode,beats:state.beats,compoundBeats:state.compoundBeats}];
@@ -348,6 +364,7 @@ function initializeBars(state){
 }
 function selectBar(state,index){
  if(!Number.isInteger(index)||index<0||index>=state.bars.length)return false;
+ ensureDrums(state.bars[index]);
  state.currentBar=index;
  state.mode=state.bars[index].mode??state.mode;
  state.beats=state.bars[index].beats;
@@ -406,6 +423,7 @@ state.defaultsVersion=1;
 migrateSharedFingers(state);
 selectBar(state,state.currentBar);
 
+ for(const bar of state.bars)ensureDrums(bar);
  state.title=normalizePatternTitle(state.title);
  return state;
 }
@@ -437,6 +455,30 @@ function saveToPatternLibrary(storage,pattern,{copy=false,now=Date.now(),id=null
  if(index<0)items.push(item);else items[index]=item;
  storage.setItem(patternLibraryKey,JSON.stringify({version:1,items}));
  return item;
+}
+
+
+const DRUM_ROWS=[
+ {key:'cymbal',name:'Cymbal',modes:['ride','crash',''],labels:['R','C',''],colors:['red','green','']},
+ {key:'hihat',name:'Hi-Hat',modes:['closed','open','pedal','rest',''],labels:['x','o','x','Rest',''],colors:['red','green','blue','rest','']},
+ {key:'tom',name:'Tom',modes:['floor','tom1','tom2','tom3',''],labels:['F','1','2','3',''],colors:['red','green','blue','yellow','']},
+ {key:'snare',name:'Snare',modes:['snare',''],labels:['',''],colors:['green','']},
+ {key:'kick',name:'Kick',modes:['kick',''],labels:['',''],colors:['red','']}
+];
+const emptyDrums=()=>Object.fromEntries(DRUM_ROWS.map(row=>[row.key,'']));
+function drumInitial(compound=false){
+ return Array.from({length:compound?12:4},(_,i)=>({division:1,steps:Array.from({length:compound?2:4},()=>({drums:emptyDrums(),accent:i===0}))}));
+}
+function ensureDrums(bar){
+ bar.drumBeats??=drumInitial();bar.drumCompoundBeats??=drumInitial(true);
+}
+function drumState(state,bar=state.bars?.[state.currentBar]??state){
+ ensureDrums(bar);return {...state,beats:bar.drumBeats,compoundBeats:bar.drumCompoundBeats};
+}
+function drumEvents(state,bar){return events(drumState(state,bar));}
+function validDrumBeats(beats,compound){
+ return beats===undefined||(Array.isArray(beats)&&beats.length===(compound?12:4)&&beats.every((beat,i)=>
+ (compound?(i%3===0?[0,1,2]:[1,2]):[1,2,4]).includes(beat.division)&&Array.isArray(beat.steps)&&beat.steps.length===(compound?2:4)&&beat.steps.every(s=>typeof s.accent==='boolean'&&s.drums&&DRUM_ROWS.every(row=>row.modes.includes(s.drums[row.key])))));
 }
 
 const OPEN_STRING_MIDI=[64,59,55,50,45,40];
@@ -508,7 +550,16 @@ function playbackTimeline(state,scopeBar=null){
   }
  }
  for(const string of held.keys())release(string,duration);
- return {events:timeline,duration,barDuration};
+ const percussion=bars.flatMap((bar,barIndex)=>drumEvents(state,bar).map(event=>({
+  ...event,type:'drums',notes:[],bar:scopeBar??barIndex,start:barIndex*barDuration+event.at*secondsPerQuarter,seconds:event.duration*secondsPerQuarter
+ })));
+ const merged=[...timeline,...percussion].sort((a,b)=>a.start-b.start||(a.type==='drums'?1:-1));
+ let guitar=null,drum=null;
+ for(const event of merged){
+  if(event.type==='drums')drum={beat:event.beat,sub:event.sub};else guitar={beat:event.beat,sub:event.sub};
+  event.guitarPosition=guitar;event.drumPosition=drum;
+ }
+ return {events:merged,duration,barDuration};
 }
 
 // Web Audio renders MIDI pitches locally, with no downloads or device permissions.
@@ -672,6 +723,7 @@ class PatternPlayer{
   this.timer=this.schedule(()=>this.tick(),25);
  }
  sound(event,time){
+  if(event.type==='drums'){this.drumSound(event,time);return;}
   if(event.type==='slap'){this.slap(time,event.accent);return;}
   // Use the actual ringing length: blank/hold slots extend the note value.
   const ringingSeconds=event.strumSeconds??Math.min(...event.notes.map(note=>note.seconds));
@@ -714,6 +766,48 @@ class PatternPlayer{
   gain.gain.linearRampToValueAtTime(0,end);
   const voice=this.track(source,gain,time,end);
   return Object.assign(voice,{levelAt:at=>at<=time?0:at<time+edge?peak*(at-time)/edge:at<release?floor+(peak-floor)*Math.exp(-(at-time-edge)/.35):at<end?(floor+(peak-floor)*Math.exp(-(release-time-edge)/.35))*(end-at)/edge:0});
+ }
+
+ async previewDrums(event){
+  this.stop();this.endTime=Infinity;const generation=this.generation;
+  try{
+   this.context??=this.contextFactory();await this.context.resume();
+   if(generation!==this.generation)return;
+   this.drumSound(event,this.context.currentTime+.01);
+  }catch(error){this.onError(error.message);}
+ }
+ drumSound(event,time){
+  for(const row of DRUM_ROWS){
+   const mode=event.drums?.[row.key]??'';if(!mode)continue;
+   if(row.key==='hihat'){
+    for(const voice of this.voices)if(voice.drumLane==='hihat'&&voice.start<time&&voice.end>time){
+     const end=time+.001,level=voice.levelAt?.(time)??.03;
+     voice.gain.gain.cancelScheduledValues(time);voice.gain.gain.setValueAtTime(level,time);
+     voice.gain.gain.linearRampToValueAtTime(0,end);voice.source.stop(end);voice.end=end;
+    }
+   }
+   if(mode==='rest')continue;
+   const ctx=this.context;
+   const length=row.key==='cymbal'?(mode==='crash'?1.6:1.0):row.key==='hihat'?(mode==='open'?.55:.09):row.key==='tom'?.4:row.key==='snare'?.22:.3;
+   const source=ctx.createBufferSource(),gain=ctx.createGain();
+   const buffer=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*length),ctx.sampleRate),data=buffer.getChannelData(0);
+   const pitch=({floor:75,tom1:110,tom2:145,tom3:190})[mode]??60;
+   let phase=0;
+   for(let i=0;i<data.length;i++){
+    const t=i/ctx.sampleRate,noise=Math.random()*2-1,decay=Math.exp(-6*t/length);
+    let sample;
+    if(row.key==='kick'){phase+=2*Math.PI*(48+95*Math.exp(-t*45))/ctx.sampleRate;sample=Math.sin(phase)*decay;}
+    else if(row.key==='tom')sample=(Math.sin(2*Math.PI*pitch*t)+noise*.12)*decay;
+    else if(row.key==='snare')sample=(noise*.8+Math.sin(2*Math.PI*180*t)*.25)*decay;
+    else sample=(noise*.6+Math.sin(2*Math.PI*(mode==='ride'?4300:6500)*t)*.15)*decay;
+    data[i]=sample*Math.min(1,t/.001)*Math.min(1,(length-t)/.003);
+   }
+   source.buffer=buffer;
+   const level=(event.accent?.19:.13)*(row.key==='cymbal'?.65:1);
+   gain.gain.setValueAtTime(level,time);
+   const voice=this.track(source,gain,time,time+length);
+   Object.assign(voice,{drumLane:row.key,levelAt:at=>at<time+length?level:0});
+  }
  }
  slap(time,accent){
   const ctx=this.context,source=ctx.createBufferSource(),gain=ctx.createGain();
@@ -766,7 +860,52 @@ function renderStep(s,b,si,hidden){
  const neckControls=hidden?'':s.type==='finger'?picking(s,b,si):s.type==='strum'?`<button class="strum-control" data-action="direction" ${data} aria-label="${s.direction} strum, click to reverse">${imageWindow('type-strum',s.direction==='down'?'215 60 130 265':'65 60 130 265',405,405,'asset-image')}</button>`:s.type==='rest'?`<span class="rest-mark">${restIcon(duration)}</span>`:s.type==='slap'?`<button class="slap-mark" data-action="slap" ${data} aria-label="Slap, click to preview">${assetImage('type-slap')}</button>`:'';
  return `<div class="step ${si?'weak':''} ${hidden?'covered':''}" data-id="${b}-${si}"${hidden?' data-covered="true"':''}><div class="control-row">${playback}</div><div class="control-row">${note}</div><div class="control-row">${emphasis}</div><div class="beat-clipboard">${beatClipboard}</div><div class="strings" ${hidden?'':`data-help="beat-board" ${data}`}>${board()}${neckControls}</div><div class="beat-number">${beatNumber}</div><div class="strings tab-strings">${board()}${hidden?'':tabControls(s,b,si)}</div><div class="chord-row">${hidden?'':`<button class="add-chord" data-action="chord" ${data}>${s.chordName==='C'?'C':'Add from<br>Chord'}</button><div class="chord-clipboard"><button data-action="copy-chord" ${data} title="Copy this TAB chord">Copy</button><button data-action="paste-chord" ${data} title="Replace this TAB chord" ${copiedChord?'':'disabled'}>Paste</button><button data-action="clear-chord" ${data} title="Clear all TAB notes in this beat" ${s.chordName||s.tab.some(note=>note.fret!==null)?'':'disabled'}>Clear</button></div>`}</div></div>`;
 }
+
+
+$('#drum-track').addEventListener('pointerdown',e=>{
+ if(e.button!==undefined&&e.button!==0)return;
+ const button=e.target.closest('[data-drum-action]');if(!button)return;
+ hideHelp();cancelHold();suppressedGridClick=null;
+ const gesture={x:e.clientX,y:e.clientY,triggered:false};holdGesture=gesture;
+ gesture.timer=setTimeout(()=>{if(holdGesture!==gesture)return;gesture.triggered=true;suppressedGridClick={key:gridControlKey(button)};showHelp(button);},500);
+});
+$('#drum-track').addEventListener('pointermove',e=>{if(holdGesture&&Math.hypot(e.clientX-holdGesture.x,e.clientY-holdGesture.y)>10){cancelHold();hideHelp();}});
+for(const name of ['pointerup','pointercancel','pointerleave'])$('#drum-track').addEventListener(name,()=>cancelHold());
+$('#drum-track').addEventListener('scroll',()=>{cancelHold();hideHelp();},true);
+$('#drum-track').addEventListener('contextmenu',e=>{if(e.target.closest('[data-drum-action]'))e.preventDefault();});
+
+function renderDrums(){
+ const ds=drumState(state),bar=state.bars[state.currentBar];
+ const slots=activeBeats(ds).slice(0,ds.signature).flatMap((beat,b)=>hiddenBeat(ds,b)?[{s:beat.steps[0],b,si:0,hidden:true}]:beat.steps.slice(0,beat.division||1).map((s,si)=>({s,b,si,hidden:false})));
+ const durationAsset=b=>({'quarter':'quarter','eighth':'eighth','sixteenth':'sixteenth','dotted-quarter':'dotted-quarter'})[durationName(ds,b)];
+ $('#drum-track').innerHTML='<h2>Drum Track</h2><div class="drum-shell"><div class="drum-labels"><div></div><div></div>'+DRUM_ROWS.map(row=>'<div>'+row.name+'</div>').join('')+'<div></div></div><div class="drum-scroll"><div class="drum-grid" style="--drum-steps:'+slots.length+'">'+slots.map(({s,b,si,hidden})=>{
+  const data='data-drum-beat="'+b+'" data-drum-sub="'+si+'"';
+  const selector=si===0&&(!isCompound(ds)||b%3===0);
+  return '<div class="drum-slot" data-drum-id="'+b+'-'+si+'"><div class="drum-control-row">'+(!hidden&&selector?'<button class="control" data-drum-action="division" '+data+' aria-label="Drum beat type">'+assetImage('note-'+durationAsset(b))+'</button>':'')+'</div><div class="drum-control-row">'+(!hidden?'<button class="control" data-drum-action="accent" '+data+' aria-label="Drum accent" aria-pressed="'+s.accent+'">'+(s.accent?accent():assetImage('type-blank'))+'</button>':'')+'</div>'+DRUM_ROWS.map(row=>{
+   const value=s.drums[row.key],index=row.modes.indexOf(value),label=row.labels[index],color=row.colors[index];
+   return '<div class="drum-cell">'+(!hidden?'<button class="drum-hit '+color+'" data-drum-action="'+row.key+'" '+data+' aria-label="'+row.name+': '+(value||'Blank')+'">'+(value==='rest'?restIcon(durationAsset(b)):label)+'</button>':'')+'</div>';
+  }).join('')+'<div class="drum-count">'+beatCountLabel(ds,b,si,hidden)+'</div></div>';
+ }).join('')+'</div></div></div>';
+}
+$('#drum-track').addEventListener('click',e=>{
+ const button=e.target.closest('[data-drum-action]');if(!button)return;
+ if(suppressedGridClick?.key===gridControlKey(button)){suppressedGridClick=null;return;}
+ hideHelp();
+ const ds=drumState(state),b=Number(button.dataset.drumBeat),si=Number(button.dataset.drumSub),action=button.dataset.drumAction;
+ const beat=activeBeats(ds)[b];if(!beat||hiddenBeat(ds,b)||!beat.steps[si])return;
+ change(()=>{
+  if(action==='division')changeDivision(ds,b);
+  else if(action==='accent')beat.steps[si].accent=!beat.steps[si].accent;
+  else {const row=DRUM_ROWS.find(row=>row.key===action);if(row)beat.steps[si].drums[row.key]=cycle(beat.steps[si].drums[row.key],row.modes);}
+ });
+ if(DRUM_ROWS.some(row=>row.key===action)){
+  const s=beat.steps[si],drums=emptyDrums();drums[action]=s.drums[action];
+  audition.previewDrums({...s,drums});
+ }
+});
+
 function render(){
+ const drumScroll=document.querySelector('.drum-scroll')?.scrollLeft??0;renderDrums();$('.drum-scroll').scrollLeft=drumScroll;
  cancelHold();hideHelp();
  updatePatternTitle();
  $('.neck-start').innerHTML=neckStart();
@@ -1032,6 +1171,12 @@ $('#fret-form').addEventListener('submit',e=>{
  if(s.tab[target.string].fret!==null)previewBeat(target.beat,target.step,target.bar);else audition.stop();
 });
 function tooltipText(button){
+ if(button.dataset.drumAction){
+  const ds=drumState(state),b=+button.dataset.drumBeat,si=+button.dataset.drumSub,s=activeBeats(ds)[b]?.steps[si],action=button.dataset.drumAction;
+  if(action==='division')return 'Drum beat type\nChange drum subdivisions independently of the guitar.';
+  if(action==='accent')return 'Drum accent\n'+(s?.accent?'On':'Off');
+  const row=DRUM_ROWS.find(row=>row.key===action);return row?row.name+' · '+(s?.drums[row.key]||'Blank')+'\nClick to cycle: '+row.modes.map(m=>m||'Blank').join(' → '):'';
+ }
  const {action,help,beat,step,string}=button.dataset;
  const b=Number(beat),si=Number(step),s=activeBeats(state)[b]?.steps[si];
  const strumTip=(s?.direction==='up'?'Up arrow · Strum downward':'Down arrow · Strum upward')+`\nPlay from ${s?.direction==='up'?'bass to treble':'treble to bass'}.\nQuarter: ${(800/state.tempo).toFixed(2)} ms · Eighth: ${(400/state.tempo).toFixed(2)} ms · Sixteenth: ${(200/state.tempo).toFixed(2)} ms between strings.\nSpacing follows tempo and actual note length, including Blank/Hold (quarter baseline: 20 ms at 40 BPM).`;
@@ -1059,7 +1204,7 @@ function tooltipText(button){
  return '';
 }
 let tooltipAnchor=null,suppressedGridClick=null;
-function gridControlKey(button){return [state.currentBar,button.dataset.action??button.dataset.help,button.dataset.beat,button.dataset.step,button.dataset.string??''].join(':');}
+function gridControlKey(button){return [state.currentBar,button.dataset.drumAction??button.dataset.action??button.dataset.help,button.dataset.drumBeat??button.dataset.beat,button.dataset.drumSub??button.dataset.step,button.dataset.string??''].join(':');}
 function hideHelp(){
  $('#help-tooltip').hidden=true;
  tooltipAnchor?.removeAttribute?.('aria-describedby');tooltipAnchor=null;
@@ -1247,9 +1392,14 @@ const player=new PatternPlayer({
  },
  onPosition:event=>{
   highlightedColumn?.classList.toggle('is-playing',false);highlightedColumn=null;
+  document.querySelector('.drum-slot.is-playing')?.classList.remove('is-playing');
   if(!event)return;
   if(state.currentBar!==event.bar){selectBar(state,event.bar);render();}
-  highlightedColumn=document.querySelector(`.step[data-id="${event.beat}-${event.sub}"]`);
+  const guitar=event.guitarPosition??event,drum=event.drumPosition;
+  const drumColumn=drum?document.querySelector('[data-drum-id="'+drum.beat+'-'+drum.sub+'"]'):null;
+  drumColumn?.classList.add('is-playing');
+  if(drumColumn){const area=$('.drum-scroll'),x=drumColumn.getBoundingClientRect(),box=area.getBoundingClientRect();if(x.right>box.right)area.scrollLeft+=x.right-box.right;else if(x.left<box.left)area.scrollLeft-=box.left-x.left;}
+  highlightedColumn=document.querySelector(`.step[data-id="${guitar.beat}-${guitar.sub}"]`);
   highlightedColumn?.classList.toggle('is-playing',true);
   if(highlightedColumn){
    const area=$('#grid-scroll'),box=highlightedColumn.getBoundingClientRect(),viewport=area.getBoundingClientRect();
