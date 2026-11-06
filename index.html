@@ -796,14 +796,21 @@ class PatternPlayer{
    for(let i=0;i<data.length;i++){
     const t=i/ctx.sampleRate,noise=Math.random()*2-1,decay=Math.exp(-6*t/length);
     let sample;
-    if(row.key==='kick'){phase+=2*Math.PI*(48+95*Math.exp(-t*45))/ctx.sampleRate;sample=Math.sin(phase)*decay;}
+    if(row.key==='kick'){
+     phase+=2*Math.PI*(52+95*Math.exp(-t*45))/ctx.sampleRate;
+     // Fundamental plus upper harmonics keep the kick audible on small speakers.
+     sample=(Math.sin(phase)*.78+Math.sin(phase*2)*.24+Math.sin(phase*3)*.12)*decay
+      +noise*.14*Math.exp(-t*180);
+    }
     else if(row.key==='tom')sample=(Math.sin(2*Math.PI*pitch*t)+noise*.12)*decay;
     else if(row.key==='snare')sample=(noise*.8+Math.sin(2*Math.PI*180*t)*.25)*decay;
     else sample=(noise*.6+Math.sin(2*Math.PI*(mode==='ride'?4300:6500)*t)*.15)*decay;
     data[i]=sample*Math.min(1,t/.001)*Math.min(1,(length-t)/.003);
    }
    source.buffer=buffer;
-   const level=(event.accent?.19:.13)*(row.key==='cymbal'?.65:1);
+   // Balance perceived loudness: stronger bass, softer high-frequency percussion.
+   const trim=({ride:.70,crash:.62,closed:.65,open:.58,pedal:.75,floor:1.20,tom1:1.08,tom2:1.02,tom3:.96,snare:.95,kick:1.80})[mode]??1;
+   const level=(event.accent?.19:.13)*trim;
    gain.gain.setValueAtTime(level,time);
    const voice=this.track(source,gain,time,time+length);
    Object.assign(voice,{drumLane:row.key,levelAt:at=>at<time+length?level:0});
