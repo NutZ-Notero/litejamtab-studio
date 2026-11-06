@@ -317,6 +317,9 @@ main{padding-bottom:110px}
  border:1px solid #777;border-radius:8px;box-shadow:none;outline:none;
 }
 :is(#instrument-track-kind,#instrument-track-name):focus-visible{border-color:#a4cf70;outline:2px solid #a4cf70;outline-offset:2px}
+.solo-instrument{width:32px;height:32px;padding:0;border:1px solid #555;border-radius:6px;background:transparent;color:#ccc;font-size:16px;font-weight:bold}
+.solo-instrument[aria-pressed="true"]{background:#70c900;border-color:#70c900;color:#172000}
+.solo-instrument:active{filter:brightness(.85)}
 </style></head>
 <body><svg xmlns="http://www.w3.org/2000/svg" id="asset-sprite" width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;overflow:hidden;pointer-events:none"></svg><main><header class="app-header"><h1>LitejamTab Studio</h1><div class="pattern-name-field"><input id="pattern-title" type="text" maxlength="80" autocomplete="off" aria-label="LitejamTab name" placeholder="Untitled LitejamTab"></div></header><section class="prototype" aria-label="LitejamTab Studio pattern editor">
 <div class="transport" role="group" aria-label="Playback"><button id="play" aria-label="Play" title="Play from start"></button><button id="loop" aria-label="Loop" aria-pressed="false" title="Loop off · click to repeat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11V7a3 3 0 0 1 3-3h13m-3-3 3 3-3 3M21 13v4a3 3 0 0 1-3 3H5m3-3-3 3 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><select id="signature" aria-label="Time signature"><option value="4">4/4</option><option value="3">3/4</option><option value="6">6/8</option><option value="9">9/8</option><option value="12">12/8</option></select><label class="tempo-control" title="Quarter-note beats per minute"><input id="tempo" type="number" min="30" max="240" step="1" value="80" aria-label="Tempo in quarter-note beats per minute"><span>BPM</span></label><span id="playback-status" class="sr-only" role="status">Stopped</span></div><p class="tooltip-hint">Press and hold any control to view its tooltip.</p><details id="guitar-section" class="track-section" open><summary>Guitar Track</summary><div class="track-clipboard" role="group" aria-label="Guitar track clipboard"><button id="copy-guitar-track" type="button">Copy</button><button id="paste-guitar-track" type="button" disabled>Paste</button></div><div class="toolbar"><div class="tabs" aria-label="Editor mode"><button class="selected" data-mode="default">Default</button><button data-mode="sandbox">Sandbox</button></div></div><div class="grid-shell"><div class="row-labels"><div aria-hidden="true"></div><div aria-hidden="true"></div><div aria-hidden="true"></div><div class="beat-clipboard-spacer" aria-hidden="true"></div><div class="board-label"><span class="vertical-board-label">BEAT</span><div class="neck-start" aria-hidden="true"></div></div><div class="beat-label" aria-hidden="true"></div><div class="board-label"><span class="vertical-board-label">TAB</span><div class="neck-start tab-neck-start" aria-hidden="true"></div></div><div class="chord-label-spacer" aria-hidden="true"></div></div><div id="grid-scroll" class="grid-scroll" tabindex="0" aria-label="Beat grid. Scroll horizontally when subdivisions exceed the available width"><div id="grid" class="grid"></div></div></div></details><details id="bass-section" class="track-section" open><summary>Bass Track</summary><div class="track-clipboard" role="group" aria-label="Bass track clipboard"><button id="copy-bass-track" type="button">Copy</button><button id="paste-bass-track" type="button" disabled>Paste</button></div><div id="bass-track"></div></details><details id="drum-section" class="track-section" open><summary>Drum Track</summary><div class="track-clipboard" role="group" aria-label="Drum track clipboard"><button id="copy-drum-track" type="button">Copy</button><button id="paste-drum-track" type="button" disabled>Paste</button></div><div id="drum-track" class="drum-track" aria-label="Drum Track"></div></details>
@@ -791,10 +794,14 @@ function alignTrackPattern(state,track){
  p.bars.length=state.bars.length;p.signature=state.signature;p.tempo=state.tempo;
  p.title=state.title;selectBar(p,state.currentBar);return p;
 }
+function audibleInstrumentTracks(state){
+ const tracks=state.tracks??[];
+ return tracks.some(track=>track.solo)?tracks.filter(track=>track.solo):tracks;
+}
 function playbackTimeline(state,scopeBar=null){
  if(!Array.isArray(state.tracks))return corePlaybackTimeline(state,scopeBar);
  const clock=corePlaybackTimeline({...state,tracks:undefined},scopeBar);
- const list=state.tracks.flatMap(track=>{
+ const list=audibleInstrumentTracks(state).flatMap(track=>{
   const p=structuredClone(track.pattern);p.signature=state.signature;p.tempo=state.tempo;p.currentBar=state.currentBar;
   while(p.bars.length<state.bars.length)appendBar(p);p.bars.length=state.bars.length;
   return corePlaybackTimeline(p,scopeBar).events.filter(e=>track.kind==='guitar'?!['bass','drums'].includes(e.type):e.type===(track.kind==='drum'?'drums':'bass')).map(e=>({...e,trackId:track.id}));
@@ -869,6 +876,11 @@ class PatternPlayer{
   if(this.next<0)this.next=nextTimeline.events.length;
   this.endTime=this.loop?Infinity:this.startTime+nextTimeline.duration;
   for(const voice of this.voices){
+   if(Array.isArray(state.tracks)&&voice.trackId&&!audibleInstrumentTracks(state).some(track=>track.id===voice.trackId)){
+    const end=now+.001,gain=voice.gain.gain,level=voice.start>now?0:voice.levelAt?.(now)??.03;
+    gain.cancelScheduledValues(now);gain.setValueAtTime(level,now);gain.linearRampToValueAtTime(0,end);
+    voice.source.stop(end);this.voices.delete(voice);continue;
+   }
    if(voice.start>=cutoff){voice.source.stop();this.voices.delete(voice);continue;}
    if(voice.end<=now||voice.midi===undefined)continue;
    // Preserve a ringing note and adjust its release to the edited pattern.
@@ -1870,7 +1882,10 @@ function renderInstrumentTracks(){
    $('#delete-instrument-name').textContent=track.name;
    $('#delete-instrument-confirm').showModal();$('#delete-instrument-cancel').focus();
   });
-  summary.append(name,rename,remove);card.append(summary);
+  const solo=document.createElement('button');solo.type='button';solo.className='solo-instrument';solo.textContent='S';
+  solo.setAttribute('aria-label','Solo '+track.name);solo.setAttribute('aria-pressed',String(!!track.solo));solo.title='Solo '+track.name;
+  solo.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();change(()=>{track.solo=!track.solo;});});
+  summary.append(name,solo,rename,remove);card.append(summary);
   const host=document.createElement('div');card.append(host);container.append(card);
   const root=host.attachShadow({mode:'open'});
   root.innerHTML='<style>'+instrumentCss+'</style>'+instrumentTemplate;
