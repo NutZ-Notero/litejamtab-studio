@@ -968,7 +968,7 @@ class PatternPlayer{
  sound(event,time){
   this.soundingTrackId=event.trackId;
   if(event.type==='drums'){this.drumSound(event,time);return;}
-  if(event.type==='bass'){for(const note of event.notes){const voice=this.pluck(note.midi,time,note.seconds,event.accent?1:.7);if(voice)Object.assign(voice,{midi:note.midi,string:note.string,eventStart:event.start,trackKind:'bass'});}return;}
+  if(event.type==='bass'){for(const note of event.notes){const voice=this.pluck(note.midi,time,note.seconds,event.accent?1:.7,'bass');if(voice)Object.assign(voice,{midi:note.midi,string:note.string,eventStart:event.start,trackKind:'bass'});}return;}
   if(event.type==='slap'){this.slap(time,event.accent);return;}
   // Use the actual ringing length: blank/hold slots extend the note value.
   const ringingSeconds=event.strumSeconds??Math.min(...event.notes.map(note=>note.seconds));
@@ -992,17 +992,23 @@ class PatternPlayer{
   source.connect(gain);gain.connect(this.context.destination);source.start(start);source.stop(Math.min(end,this.endTime));
   return voice;
  }
- pluck(midi,time,duration,velocity){
+ pluck(midi,time,duration,velocity,timbre='guitar'){
   const ctx=this.context,source=ctx.createOscillator(),gain=ctx.createGain();
   if(!this.wave){
    const real=new Float32Array(12),imag=new Float32Array(12);
    for(let i=1;i<imag.length;i++)imag[i]=Math.pow(.68,i-1)/i;
    this.wave=ctx.createPeriodicWave(real,imag);
   }
-  source.setPeriodicWave(this.wave);source.frequency.setValueAtTime(440*Math.pow(2,(midi-69)/12),time);
+  // A separate, richer bass wave keeps low notes audible alongside guitar.
+  if(timbre==='bass'&&!this.bassWave){
+   const real=new Float32Array(12),imag=new Float32Array(12);
+   for(let i=1;i<imag.length;i++)imag[i]=Math.pow(.82,i-1)/i;
+   this.bassWave=ctx.createPeriodicWave(real,imag);
+  }
+  source.setPeriodicWave(timbre==='bass'?this.bassWave:this.wave);source.frequency.setValueAtTime(440*Math.pow(2,(midi-69)/12),time);
   const end=time+duration;
   // Sub-millisecond edge smoothing prevents waveform clicks without a release tail or gap.
-  const edge=Math.min(.001,duration/4),peak=.095*velocity,floor=.012*velocity;
+  const edge=Math.min(.001,duration/4),peak=(timbre==='bass'?.2375:.095)*velocity,floor=(timbre==='bass'?.03:.012)*velocity;
   gain.gain.setValueAtTime(0,time);
   gain.gain.linearRampToValueAtTime(peak,time+edge);
   gain.gain.setTargetAtTime(floor,time+edge,.35);
