@@ -473,7 +473,7 @@ function saveToPatternLibrary(storage,pattern,{copy=false,now=Date.now(),id=null
 const DRUM_ROWS=[
  {key:'cymbal',name:'Cymbal',modes:['ride','crash',''],labels:['R','C',''],colors:['red','green','']},
  {key:'hihat',name:'Hi-Hat',modes:['closed','open','pedal','rest',''],labels:['x','o','x','Rest',''],colors:['red','green','blue','rest','']},
- {key:'tom',name:'Tom',modes:['floor','tom1','tom2','tom3',''],labels:['F','1','2','3',''],colors:['red','green','blue','yellow','']},
+ {key:'tom',name:'Tom',modes:['tom1','tom2','tom3',''],labels:['1','2','3',''],colors:['red','green','yellow','']},
  {key:'snare',name:'Snare',modes:['snare',''],labels:['',''],colors:['green','']},
  {key:'kick',name:'Kick',modes:['kick',''],labels:['',''],colors:['red','']}
 ];
@@ -481,8 +481,10 @@ const emptyDrums=()=>Object.fromEntries(DRUM_ROWS.map(row=>[row.key,'']));
 function drumInitial(compound=false){
  return Array.from({length:compound?12:4},(_,i)=>({division:1,steps:Array.from({length:compound?4:8},()=>({drums:emptyDrums(),accent:i===0}))}));
 }
+const drumModeName=mode=>({tom1:'High tom',tom2:'Mid tom',tom3:'Floor tom'})[mode]??mode;
 function ensureDrums(bar){
  bar.drumBeats??=drumInitial();bar.drumCompoundBeats??=drumInitial(true);
+ for(const beat of [...bar.drumBeats,...bar.drumCompoundBeats])for(const s of beat.steps)if(s.drums?.tom==='floor')s.drums.tom='tom3';
  for(const [beats,size] of [[bar.drumBeats,8],[bar.drumCompoundBeats,4]])for(const beat of beats)while(beat.steps.length<size)beat.steps.push({drums:emptyDrums(),accent:false});
 }
 function drumState(state,bar=state.bars?.[state.currentBar]??state){
@@ -498,7 +500,7 @@ function changeDrumDivision(state,index){
 function drumEvents(state,bar){return events(drumState(state,bar));}
 function validDrumBeats(beats,compound){
  return beats===undefined||(Array.isArray(beats)&&beats.length===(compound?12:4)&&beats.every((beat,i)=>
- (compound?(i%3===0?[0,1,2,4]:[1,2,4]):[1,2,4,8]).includes(beat.division)&&Array.isArray(beat.steps)&&[compound?2:4,compound?4:8].includes(beat.steps.length)&&beat.steps.every(s=>typeof s.accent==='boolean'&&s.drums&&DRUM_ROWS.every(row=>row.modes.includes(s.drums[row.key])))));
+ (compound?(i%3===0?[0,1,2,4]:[1,2,4]):[1,2,4,8]).includes(beat.division)&&Array.isArray(beat.steps)&&[compound?2:4,compound?4:8].includes(beat.steps.length)&&beat.steps.every(s=>typeof s.accent==='boolean'&&s.drums&&DRUM_ROWS.every(row=>(row.modes.includes(s.drums[row.key])||(row.key==='tom'&&s.drums.tom==='floor'))))));
 }
 
 const OPEN_STRING_MIDI=[64,59,55,50,45,40];
@@ -811,7 +813,7 @@ class PatternPlayer{
    const length=row.key==='cymbal'?(mode==='crash'?1.6:1.0):row.key==='hihat'?(mode==='open'?.55:.09):row.key==='tom'?.4:row.key==='snare'?.22:.3;
    const source=ctx.createBufferSource(),gain=ctx.createGain();
    const buffer=ctx.createBuffer(1,Math.ceil(ctx.sampleRate*length),ctx.sampleRate),data=buffer.getChannelData(0);
-   const pitch=({floor:75,tom1:110,tom2:145,tom3:190})[mode]??60;
+   const pitch=({floor:75,tom1:190,tom2:145,tom3:75})[mode]??60;
    let phase=0;
    for(let i=0;i<data.length;i++){
     const t=i/ctx.sampleRate,noise=Math.random()*2-1,decay=Math.exp(-6*t/length);
@@ -829,7 +831,7 @@ class PatternPlayer{
    }
    source.buffer=buffer;
    // Balance perceived loudness: stronger bass, softer high-frequency percussion.
-   const trim=({ride:.70,crash:.62,closed:.65,open:.58,pedal:.75,floor:1.20,tom1:1.08,tom2:1.02,tom3:.96,snare:.95,kick:1.80})[mode]??1;
+   const trim=({ride:.70,crash:.62,closed:.65,open:.58,pedal:.75,floor:1.20,tom1:.96,tom2:1.02,tom3:1.20,snare:.95,kick:1.80})[mode]??1;
    const level=(event.accent?.19:.13)*trim;
    gain.gain.setValueAtTime(level,time);
    const voice=this.track(source,gain,time,time+length);
@@ -910,7 +912,7 @@ function renderDrums(){
   const selector=si===0&&(!isCompound(ds)||b%3===0);
   return '<div class="drum-slot" data-drum-id="'+b+'-'+si+'"><div class="drum-control-row">'+(!hidden&&selector?'<button class="control" data-drum-action="division" '+data+' aria-label="Drum beat type">'+(activeBeats(ds)[b].division===(isCompound(ds)?4:8)?assetImage('note-thirty-second'):assetImage('note-'+durationAsset(b)))+'</button>':'')+'</div><div class="drum-control-row">'+(!hidden?'<button class="control" data-drum-action="accent" '+data+' aria-label="Drum accent" aria-pressed="'+s.accent+'">'+(s.accent?accent():assetImage('type-blank'))+'</button>':'')+'</div>'+DRUM_ROWS.map(row=>{
    const value=s.drums[row.key],index=row.modes.indexOf(value),label=row.labels[index],color=row.colors[index];
-   return '<div class="drum-cell">'+(!hidden?'<button class="drum-hit '+color+'" data-drum-action="'+row.key+'" '+data+' aria-label="'+row.name+': '+(value||'Blank')+'">'+(value==='rest'?restIcon(durationAsset(b)??'sixteenth'):label)+'</button>':'')+'</div>';
+   return '<div class="drum-cell">'+(!hidden?'<button class="drum-hit '+color+'" data-drum-action="'+row.key+'" '+data+' aria-label="'+row.name+': '+(drumModeName(value)||'Blank')+'">'+(value==='rest'?restIcon(durationAsset(b)??'sixteenth'):label)+'</button>':'')+'</div>';
   }).join('')+'<div class="drum-count">'+beatCountLabel(ds,b,si,hidden)+'</div></div>';
  }).join('')+'</div></div></div>';
 }
@@ -1202,7 +1204,7 @@ function tooltipText(button){
   const ds=drumState(state),b=+button.dataset.drumBeat,si=+button.dataset.drumSub,s=activeBeats(ds)[b]?.steps[si],action=button.dataset.drumAction;
   if(action==='division')return 'Drum beat type\nChange drum subdivisions independently of the guitar.';
   if(action==='accent')return 'Drum accent\n'+(s?.accent?'On':'Off');
-  const row=DRUM_ROWS.find(row=>row.key===action);return row?row.name+' · '+(s?.drums[row.key]||'Blank')+'\nClick to cycle: '+row.modes.map(m=>m||'Blank').join(' → '):'';
+  const row=DRUM_ROWS.find(row=>row.key===action);return row?row.name+' · '+(drumModeName(s?.drums[row.key])||'Blank')+'\nClick to cycle: '+row.modes.map(m=>drumModeName(m)||'Blank').join(' → '):'';
  }
  const {action,help,beat,step,string}=button.dataset;
  const b=Number(beat),si=Number(step),s=activeBeats(state)[b]?.steps[si];
