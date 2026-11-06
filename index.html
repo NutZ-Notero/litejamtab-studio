@@ -635,10 +635,21 @@ function ensureDrums(bar){
 function drumState(state,bar=state.bars?.[state.currentBar]??state){
  ensureDrums(bar);return {...state,beats:bar.drumBeats,compoundBeats:bar.drumCompoundBeats};
 }
+// Reorder stored slots without deleting hidden subdivisions.
+function remapSubdivisionSteps(beat,previous,next){
+ const count=beat.steps.length;
+ const order=division=>{
+  const visible=Array.from({length:division},(_,i)=>i*count/division);
+  return [...visible,...Array.from({length:count},(_,i)=>i).filter(i=>!visible.includes(i))];
+ };
+ const before=order(previous),after=order(next),stored=beat.steps.slice(),mapped=stored.slice();
+ for(let i=0;i<count;i++)mapped[i]=stored[before.indexOf(after[i])];
+ beat.steps=mapped;
+}
 function changeDrumDivision(state,index){
  const beat=activeBeats(state)[index],compound=isCompound(state),next=cycle(beat.division,compound?[0,1,2,4]:[1,2,4,8]);
  const previous=beat.stepLayout??(beat.division||1);
- if(next>0&&previous!==next){const stored=beat.steps.slice(),mapped=stored.map(()=>({drums:emptyDrums(),accent:false}));for(let i=0;i<previous;i++){const target=i*next/previous;if(Number.isInteger(target))mapped[target]=stored[i];}beat.steps=mapped;}
+ if(next>0&&previous!==next)remapSubdivisionSteps(beat,previous,next);
  beat.division=next;beat.stepLayout=next||previous;
  if(compound)for(let offset=1;offset<3;offset++){const other=activeBeats(state)[index+offset];other.division=next||1;}
 }
@@ -674,7 +685,7 @@ function validBassBeats(beats,compound){
 function changeBassDivision(state,index){
  const beat=activeBeats(state)[index],compound=isCompound(state),next=cycle(beat.division,compound?[0,1,2,4]:[1,2,4,8]);
  const previous=beat.stepLayout??(beat.division||1);
- if(next>0&&previous!==next){const old=beat.steps.slice(),mapped=bassInitial(compound)[0].steps.map(s=>({...s,accent:false}));for(let i=0;i<previous;i++){const target=i*next/previous;if(Number.isInteger(target))mapped[target]=old[i];}beat.steps=mapped;}
+ if(next>0&&previous!==next)remapSubdivisionSteps(beat,previous,next);
  beat.division=next;beat.stepLayout=next||previous;
  if(compound)for(let offset=1;offset<3;offset++)activeBeats(state)[index+offset].division=next||1;
 }
