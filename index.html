@@ -467,18 +467,26 @@ const DRUM_ROWS=[
 ];
 const emptyDrums=()=>Object.fromEntries(DRUM_ROWS.map(row=>[row.key,'']));
 function drumInitial(compound=false){
- return Array.from({length:compound?12:4},(_,i)=>({division:1,steps:Array.from({length:compound?2:4},()=>({drums:emptyDrums(),accent:i===0}))}));
+ return Array.from({length:compound?12:4},(_,i)=>({division:1,steps:Array.from({length:compound?4:8},()=>({drums:emptyDrums(),accent:i===0}))}));
 }
 function ensureDrums(bar){
  bar.drumBeats??=drumInitial();bar.drumCompoundBeats??=drumInitial(true);
+ for(const [beats,size] of [[bar.drumBeats,8],[bar.drumCompoundBeats,4]])for(const beat of beats)while(beat.steps.length<size)beat.steps.push({drums:emptyDrums(),accent:false});
 }
 function drumState(state,bar=state.bars?.[state.currentBar]??state){
  ensureDrums(bar);return {...state,beats:bar.drumBeats,compoundBeats:bar.drumCompoundBeats};
 }
+function changeDrumDivision(state,index){
+ const beat=activeBeats(state)[index],compound=isCompound(state),next=cycle(beat.division,compound?[0,1,2,4]:[1,2,4,8]);
+ const previous=beat.stepLayout??(beat.division||1);
+ if(next>0&&previous!==next){const stored=beat.steps.slice(),mapped=stored.map(()=>({drums:emptyDrums(),accent:false}));for(let i=0;i<previous;i++){const target=i*next/previous;if(Number.isInteger(target))mapped[target]=stored[i];}beat.steps=mapped;}
+ beat.division=next;beat.stepLayout=next||previous;
+ if(compound)for(let offset=1;offset<3;offset++){const other=activeBeats(state)[index+offset];other.division=next||1;}
+}
 function drumEvents(state,bar){return events(drumState(state,bar));}
 function validDrumBeats(beats,compound){
  return beats===undefined||(Array.isArray(beats)&&beats.length===(compound?12:4)&&beats.every((beat,i)=>
- (compound?(i%3===0?[0,1,2]:[1,2]):[1,2,4]).includes(beat.division)&&Array.isArray(beat.steps)&&beat.steps.length===(compound?2:4)&&beat.steps.every(s=>typeof s.accent==='boolean'&&s.drums&&DRUM_ROWS.every(row=>row.modes.includes(s.drums[row.key])))));
+ (compound?(i%3===0?[0,1,2,4]:[1,2,4]):[1,2,4,8]).includes(beat.division)&&Array.isArray(beat.steps)&&[compound?2:4,compound?4:8].includes(beat.steps.length)&&beat.steps.every(s=>typeof s.accent==='boolean'&&s.drums&&DRUM_ROWS.every(row=>row.modes.includes(s.drums[row.key])))));
 }
 
 const OPEN_STRING_MIDI=[64,59,55,50,45,40];
@@ -888,9 +896,9 @@ function renderDrums(){
  $('#drum-track').innerHTML='<h2>Drum Track</h2><div class="drum-shell"><div class="drum-labels"><div></div><div></div>'+DRUM_ROWS.map(row=>'<div>'+row.name+'</div>').join('')+'<div></div></div><div class="drum-scroll"><div class="drum-grid" style="--drum-steps:'+slots.length+'">'+slots.map(({s,b,si,hidden})=>{
   const data='data-drum-beat="'+b+'" data-drum-sub="'+si+'"';
   const selector=si===0&&(!isCompound(ds)||b%3===0);
-  return '<div class="drum-slot" data-drum-id="'+b+'-'+si+'"><div class="drum-control-row">'+(!hidden&&selector?'<button class="control" data-drum-action="division" '+data+' aria-label="Drum beat type">'+assetImage('note-'+durationAsset(b))+'</button>':'')+'</div><div class="drum-control-row">'+(!hidden?'<button class="control" data-drum-action="accent" '+data+' aria-label="Drum accent" aria-pressed="'+s.accent+'">'+(s.accent?accent():assetImage('type-blank'))+'</button>':'')+'</div>'+DRUM_ROWS.map(row=>{
+  return '<div class="drum-slot" data-drum-id="'+b+'-'+si+'"><div class="drum-control-row">'+(!hidden&&selector?'<button class="control" data-drum-action="division" '+data+' aria-label="Drum beat type">'+(activeBeats(ds)[b].division===(isCompound(ds)?4:8)?'<span class="drum-32">32nd</span>':assetImage('note-'+durationAsset(b)))+'</button>':'')+'</div><div class="drum-control-row">'+(!hidden?'<button class="control" data-drum-action="accent" '+data+' aria-label="Drum accent" aria-pressed="'+s.accent+'">'+(s.accent?accent():assetImage('type-blank'))+'</button>':'')+'</div>'+DRUM_ROWS.map(row=>{
    const value=s.drums[row.key],index=row.modes.indexOf(value),label=row.labels[index],color=row.colors[index];
-   return '<div class="drum-cell">'+(!hidden?'<button class="drum-hit '+color+'" data-drum-action="'+row.key+'" '+data+' aria-label="'+row.name+': '+(value||'Blank')+'">'+(value==='rest'?restIcon(durationAsset(b)):label)+'</button>':'')+'</div>';
+   return '<div class="drum-cell">'+(!hidden?'<button class="drum-hit '+color+'" data-drum-action="'+row.key+'" '+data+' aria-label="'+row.name+': '+(value||'Blank')+'">'+(value==='rest'?restIcon(durationAsset(b)??'sixteenth'):label)+'</button>':'')+'</div>';
   }).join('')+'<div class="drum-count">'+beatCountLabel(ds,b,si,hidden)+'</div></div>';
  }).join('')+'</div></div></div>';
 }
@@ -901,7 +909,7 @@ $('#drum-track').addEventListener('click',e=>{
  const ds=drumState(state),b=Number(button.dataset.drumBeat),si=Number(button.dataset.drumSub),action=button.dataset.drumAction;
  const beat=activeBeats(ds)[b];if(!beat||hiddenBeat(ds,b)||!beat.steps[si])return;
  change(()=>{
-  if(action==='division')changeDivision(ds,b);
+  if(action==='division')changeDrumDivision(ds,b);
   else if(action==='accent')beat.steps[si].accent=!beat.steps[si].accent;
   else {const row=DRUM_ROWS.find(row=>row.key===action);if(row)beat.steps[si].drums[row.key]=cycle(beat.steps[si].drums[row.key],row.modes);}
  });
