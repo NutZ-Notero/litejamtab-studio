@@ -760,13 +760,60 @@ function beatChordName(step,string,value){
   ['11',[0,2,4,5,7,10]],['m11',[0,2,3,5,7,10]],
   ['13',[0,2,4,7,9,10]],['maj13',[0,2,4,7,9,11]],['m13',[0,2,3,7,9,10]]
  ];
- // Prefer a root-position reading; otherwise report the actual bass as an inversion.
- for(const root of [pitches[0]%12,...pcs.filter(n=>n!==pitches[0]%12)]){
-  const intervals=pcs.map(n=>(n-root+12)%12).sort((a,b)=>a-b);
-  const match=chords.find(([,pattern])=>pattern.length===intervals.length&&pattern.every((n,i)=>n===intervals[i]));
-  if(match)return names[root]+match[0]+(root===pitches[0]%12?'':'/'+names[pitches[0]%12]);
+ // Generate exact pitch-set spellings, including altered extensions and omitted fifths.
+ // Never discard an unexplained note to force a familiar chord name.
+ const candidates=chords.map(([name,tones])=>({name,tones,cost:0}));
+ const add=(name,tones,cost)=>candidates.push({name,tones:[...new Set(tones)].sort((a,b)=>a-b),cost});
+ const qualities=[['',[0,4,7]],['m',[0,3,7]],['dim',[0,3,6]],['aug',[0,4,8]],['sus2',[0,2,7]],['sus4',[0,5,7]]];
+ const tensions=[[1,'♭9'],[2,'9'],[3,'♯9'],[5,'11'],[6,'♯11'],[8,'♭13'],[9,'13']];
+ for(const [quality,triad] of qualities){
+  // Added tones do not imply a seventh. Prefer 6 over add13 when identical.
+  for(let mask=1;mask<(1<<tensions.length);mask++){
+   const extras=tensions.filter((_,i)=>mask&(1<<i));
+   if(extras.some(([tone])=>triad.includes(tone)))continue;
+   const tones=[...new Set([...triad,...extras.map(([tone])=>tone)])];
+   if(tones.length>6)continue;
+   add(quality+'(add'+extras.map(([,label])=>label).join(',add')+')',tones,2+extras.length);
+  }
+  for(const [seventh,interval] of [['7',10],['maj7',11]]){
+   const base=quality+seventh;
+   for(let mask=0;mask<(1<<tensions.length);mask++){
+    const extras=tensions.filter((_,i)=>mask&(1<<i));
+    if(extras.some(([tone])=>triad.includes(tone)))continue;
+    let name=base,alterations=[];
+    const natural=extras.filter(([,label])=>['9','11','13'].includes(label)).map(([,label])=>Number(label));
+    const extension=Math.max(7,...natural);
+    if(extension>7)name=quality+(seventh==='maj7'?'maj':'')+extension;
+    alterations=extras.filter(([,label])=>!['9','11','13'].includes(label)).map(([,label])=>label);
+    // 11 and 13 conventionally imply lower extensions; state their omission.
+    const omissions=[];
+    if(extension>=11&&!extras.some(([tone])=>tone===2))omissions.push('no9');
+    if(alterations.length||omissions.length)name+='('+[...alterations,...omissions].join(',')+')';
+    const tones=[...new Set([...triad,interval,...extras.map(([tone])=>tone)])];
+    if(tones.length<=6)add(name,tones,3+extras.length);
+    if(triad[2]===7){
+     const shell=tones.filter(tone=>tone!==7);
+     if(shell.length>=3&&shell.length<=6)add(name+'(no5)',shell,8+extras.length);
+    }
+   }
+  }
  }
- return '-';
+ const bass=pitches[0]%12,roots=[bass,...pcs.filter(n=>n!==bass)];
+ // Complete conventional chords win over complex alternative root interpretations.
+ const matches=[];
+ for(const root of roots){
+  const intervals=pcs.map(n=>(n-root+12)%12).sort((a,b)=>a-b);
+  for(const candidate of candidates){
+   if(candidate.tones.length===intervals.length&&candidate.tones.every((n,i)=>n===intervals[i]))
+    matches.push({root,...candidate,score:candidate.cost+(root===bass?0:1)});
+  }
+ }
+ matches.sort((a,b)=>a.score-b.score||roots.indexOf(a.root)-roots.indexOf(b.root));
+ const match=matches[0];
+ if(match)return names[match.root]+match.name+(match.root===bass?'':'/'+names[bass]);
+ // Nonstandard clusters still get an honest interval description relative to bass.
+ const degrees=['1','♭9','9','♭3','3','11','♯11','5','♭13','13','♭7','7'];
+ return names[bass]+'('+pcs.map(n=>(n-bass+12)%12).sort((a,b)=>a-b).filter(n=>n!==0).map(n=>degrees[n]).join(',')+')';
 }
 
 function playbackNotes(event,mode){
