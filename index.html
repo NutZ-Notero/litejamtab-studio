@@ -1995,11 +1995,21 @@ function cancelTrackDrag(){
  d.ghost?.remove();d.card.classList.remove('track-drag-source');
  document.querySelectorAll('.track-drop-target').forEach(c=>c.classList.remove('track-drop-target'));
  try{d.summary.releasePointerCapture(d.pointerId);}catch{}
+ if(d.needsRender)renderInstrumentTracks();
 }
 function updateTrackDrag(){
  const d=trackDrag;if(!d?.active)return;
  d.ghost.style.left=d.x+'px';d.ghost.style.top=d.y+'px';
- const hit=document.elementFromPoint(d.x,d.y)?.closest('.instrument-card');
+ // Use card geometry: gaps and shadow-root content must not lose the drop target.
+ const cards=[...document.querySelectorAll('#instrument-tracks > .instrument-card')];
+ let hit=cards.find(card=>{const r=card.getBoundingClientRect();return d.y>=r.top&&d.y<=r.bottom;});
+ if(!hit&&cards.length){
+  hit=cards.reduce((best,card)=>{
+   const r=card.getBoundingClientRect(),b=best.getBoundingClientRect();
+   const distance=r=>Math.max(r.top-d.y,0,d.y-r.bottom);
+   return distance(r)<distance(b)?card:best;
+  });
+ }
  document.querySelectorAll('.track-drop-target').forEach(c=>c.classList.remove('track-drop-target'));
  d.target=hit&&hit!==d.card?hit.dataset.trackId:null;
  if(d.target)hit.classList.add('track-drop-target');
@@ -2013,10 +2023,11 @@ function bindTrackDrag(summary,card,track){
   if(e.button!==0||e.isPrimary===false||e.target.closest('button'))return;
   cancelTrackDrag();
   const d=trackDrag={summary,card,id:track.id,pointerId:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,active:false};
+  try{summary.setPointerCapture(d.pointerId);}catch{}
   d.timer=setTimeout(()=>{
    if(trackDrag!==d||!card.isConnected)return;
    d.active=true;trackDragClickUntil=Date.now()+1500;
-   summary.setPointerCapture(d.pointerId);
+   try{summary.setPointerCapture(d.pointerId);}catch{}
    d.ghost=document.createElement('div');d.ghost.className='track-drag-ghost';d.ghost.textContent=track.name;document.body.append(d.ghost);
    card.classList.add('track-drag-source');updateTrackDrag();
    const scroll=()=>{
@@ -2031,13 +2042,13 @@ function bindTrackDrag(summary,card,track){
  summary.addEventListener('pointermove',e=>{
   const d=trackDrag;if(!d||d.summary!==summary||d.pointerId!==e.pointerId)return;
   d.x=e.clientX;d.y=e.clientY;
-  if(!d.active){if(Math.hypot(d.x-d.startX,d.y-d.startY)>10)cancelTrackDrag();return;}
+  if(!d.active){if(Math.hypot(d.x-d.startX,d.y-d.startY)>24)cancelTrackDrag();return;}
   e.preventDefault();updateTrackDrag();
  },{passive:false});
  summary.addEventListener('pointerup',e=>{
   const d=trackDrag;if(!d||d.summary!==summary||d.pointerId!==e.pointerId)return;
   if(d.active){
-   e.preventDefault();updateTrackDrag();trackDragClickUntil=Date.now()+600;
+   e.preventDefault();d.x=e.clientX;d.y=e.clientY;updateTrackDrag();trackDragClickUntil=Date.now()+600;
    if(d.target&&state.tracks.some(t=>t.id===d.id)&&state.tracks.some(t=>t.id===d.target)){
     history.push(structuredClone(state));if(history.length>60)history.shift();
     swapInstrumentTracks(state,d.id,d.target);persist();$('#undo').disabled=false;
@@ -2053,6 +2064,7 @@ function bindTrackDrag(summary,card,track){
 }
 
 function renderInstrumentTracks(){
+ if(trackDrag?.active){trackDrag.needsRender=true;return;}
  cancelTrackDrag();
  migrateInstrumentTracks(state);
  for(const [id,editor] of instrumentEditors){instrumentClipboards.set(id,editor.api.ui());instrumentFolds.set(id,editor.card.open);editor.api.dispose();}
