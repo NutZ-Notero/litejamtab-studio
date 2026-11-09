@@ -320,6 +320,10 @@ main{padding-bottom:110px}
 .solo-instrument{width:32px;height:32px;padding:0;border:1px solid #555;border-radius:6px;background:transparent;color:#ccc;font-size:16px;font-weight:bold}
 .solo-instrument[aria-pressed="true"]{background:#70c900;border-color:#70c900;color:#172000}
 .solo-instrument:active{filter:brightness(.85)}
+.instrument-card>summary{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab}
+.track-drag-source{opacity:.45}
+.instrument-card.track-drop-target{outline:2px solid #80d420;outline-offset:2px}
+.track-drag-ghost{position:fixed;transform:translate(-50%,-50%);z-index:10000;pointer-events:none;padding:15px 24px;max-width:85vw;background:#303a24;color:#fff;border:2px solid #80d420;border-radius:12px;box-shadow:0 8px 28px #0009;font-weight:bold;overflow-wrap:anywhere}
 </style><!-- Pages redeploy: solo and subdivision preservation -->
 </head>
 <body><svg xmlns="http://www.w3.org/2000/svg" id="asset-sprite" width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;overflow:hidden;pointer-events:none"></svg><main><header class="app-header"><h1>Litejam Studio</h1><div class="pattern-name-field"><input id="pattern-title" type="text" maxlength="80" autocomplete="off" aria-label="LitejamTab name" placeholder="Untitled LitejamTab"></div></header><section class="prototype" aria-label="Litejam Studio pattern editor">
@@ -1978,7 +1982,78 @@ return {
 `);
 const instrumentEditors=new Map(),instrumentClipboards=new Map(),instrumentFolds=new Map();
 let editingInstrumentId=null,deletingInstrumentId=null;
+
+let trackDrag=null,trackDragClickUntil=0;
+function swapInstrumentTracks(state,fromId,toId){
+ const a=state.tracks.findIndex(t=>t.id===fromId),b=state.tracks.findIndex(t=>t.id===toId);
+ if(a<0||b<0||a===b)return false;
+ [state.tracks[a],state.tracks[b]]=[state.tracks[b],state.tracks[a]];return true;
+}
+function cancelTrackDrag(){
+ const d=trackDrag;if(!d)return;trackDrag=null;
+ clearTimeout(d.timer);cancelAnimationFrame(d.frame);
+ d.ghost?.remove();d.card.classList.remove('track-drag-source');
+ document.querySelectorAll('.track-drop-target').forEach(c=>c.classList.remove('track-drop-target'));
+ try{d.summary.releasePointerCapture(d.pointerId);}catch{}
+}
+function updateTrackDrag(){
+ const d=trackDrag;if(!d?.active)return;
+ d.ghost.style.left=d.x+'px';d.ghost.style.top=d.y+'px';
+ const hit=document.elementFromPoint(d.x,d.y)?.closest('.instrument-card');
+ document.querySelectorAll('.track-drop-target').forEach(c=>c.classList.remove('track-drop-target'));
+ d.target=hit&&hit!==d.card?hit.dataset.trackId:null;
+ if(d.target)hit.classList.add('track-drop-target');
+}
+function bindTrackDrag(summary,card,track){
+ summary.addEventListener('click',e=>{
+  if(Date.now()<trackDragClickUntil){e.preventDefault();e.stopImmediatePropagation();}
+ },true);
+ summary.addEventListener('contextmenu',e=>e.preventDefault());
+ summary.addEventListener('pointerdown',e=>{
+  if(e.button!==0||e.isPrimary===false||e.target.closest('button'))return;
+  cancelTrackDrag();
+  const d=trackDrag={summary,card,id:track.id,pointerId:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY,active:false};
+  d.timer=setTimeout(()=>{
+   if(trackDrag!==d||!card.isConnected)return;
+   d.active=true;trackDragClickUntil=Date.now()+1500;
+   summary.setPointerCapture(d.pointerId);
+   d.ghost=document.createElement('div');d.ghost.className='track-drag-ghost';d.ghost.textContent=track.name;document.body.append(d.ghost);
+   card.classList.add('track-drag-source');updateTrackDrag();
+   const scroll=()=>{
+    if(trackDrag!==d)return;
+    const edge=64,height=window.innerHeight;
+    if(d.y<edge)window.scrollBy(0,-Math.ceil((edge-d.y)/5));
+    else if(d.y>height-edge)window.scrollBy(0,Math.ceil((d.y-height+edge)/5));
+    updateTrackDrag();d.frame=requestAnimationFrame(scroll);
+   };d.frame=requestAnimationFrame(scroll);
+  },1000);
+ });
+ summary.addEventListener('pointermove',e=>{
+  const d=trackDrag;if(!d||d.summary!==summary||d.pointerId!==e.pointerId)return;
+  d.x=e.clientX;d.y=e.clientY;
+  if(!d.active){if(Math.hypot(d.x-d.startX,d.y-d.startY)>10)cancelTrackDrag();return;}
+  e.preventDefault();updateTrackDrag();
+ },{passive:false});
+ summary.addEventListener('pointerup',e=>{
+  const d=trackDrag;if(!d||d.summary!==summary||d.pointerId!==e.pointerId)return;
+  if(d.active){
+   e.preventDefault();updateTrackDrag();trackDragClickUntil=Date.now()+600;
+   if(d.target&&state.tracks.some(t=>t.id===d.id)&&state.tracks.some(t=>t.id===d.target)){
+    history.push(structuredClone(state));if(history.length>60)history.shift();
+    swapInstrumentTracks(state,d.id,d.target);persist();$('#undo').disabled=false;
+    const container=$('#instrument-tracks');
+    for(const t of state.tracks)container.append(instrumentEditors.get(t.id).card);
+   }
+  }
+  cancelTrackDrag();
+ });
+ for(const event of ['pointercancel','lostpointercapture'])summary.addEventListener(event,()=>{
+  if(trackDrag?.summary===summary){if(trackDrag.active)trackDragClickUntil=Date.now()+600;cancelTrackDrag();}
+ });
+}
+
 function renderInstrumentTracks(){
+ cancelTrackDrag();
  migrateInstrumentTracks(state);
  for(const [id,editor] of instrumentEditors){instrumentClipboards.set(id,editor.api.ui());instrumentFolds.set(id,editor.card.open);editor.api.dispose();}
  instrumentEditors.clear();
@@ -1998,6 +2073,7 @@ function renderInstrumentTracks(){
   solo.setAttribute('aria-label','Solo '+track.name);solo.setAttribute('aria-pressed',String(!!track.solo));solo.title='Solo '+track.name;
   solo.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();change(()=>{track.solo=!track.solo;});});
   summary.append(name,solo,rename,remove);card.append(summary);
+  card.dataset.trackId=track.id;bindTrackDrag(summary,card,track);
   const host=document.createElement('div');card.append(host);container.append(card);
   const root=host.attachShadow({mode:'open'});
   root.innerHTML='<style>'+instrumentCss+'</style>'+instrumentTemplate;
